@@ -275,6 +275,8 @@ const WorkerFormPage = () => {
     });
   };
 
+  const availableCities = location?.state ? STATE_CITY_DATA[location.state] || [] : [];
+
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto">
@@ -405,17 +407,27 @@ const WorkerFormPage = () => {
                     {/* City */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">City/District <span className="text-red-500">*</span></label>
-                      <select
-                        value={location?.city || ''}
-                        onChange={(e) => handleLocationChange('city', e.target.value)}
-                        disabled={!location?.state}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                      >
-                        <option value="">-- Select City --</option>
-                        {location?.state && STATE_CITY_DATA[location.state].map(city => (
-                          <option key={city} value={city}>{city}</option>
-                        ))}
-                      </select>
+                      {location?.state && availableCities.length === 0 ? (
+                        <input
+                          type="text"
+                          value={location?.city || ''}
+                          onChange={(e) => handleLocationChange('city', e.target.value)}
+                          placeholder="Enter city manually"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                        <select
+                          value={location?.city || ''}
+                          onChange={(e) => handleLocationChange('city', e.target.value)}
+                          disabled={!location?.state}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                        >
+                          <option value="">-- Select City --</option>
+                          {availableCities.map(city => (
+                            <option key={city} value={city}>{city}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </div>
 

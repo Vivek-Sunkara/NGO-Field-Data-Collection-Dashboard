@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSmile, FiFileText, FiCheckCircle, FiClock, FiTrendingUp, FiArrowRight, FiBell } from 'react-icons/fi';
+import { FiSmile, FiFileText, FiCheckCircle, FiClock, FiTrendingUp, FiArrowRight, FiBell, FiSave } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/hooks/useAuth';
 import api from '@/api/client';
@@ -43,51 +43,58 @@ const FieldWorkerDashboard = () => {
         const submissionMap = new Map();
         submissionsData.forEach(sub => {
           if (sub.formId) {
-            const formId = sub.formId._id || sub.formId;
-            submissionMap.set(formId, sub);
+            const fId = (sub.formId._id || sub.formId).toString();
+            submissionMap.set(fId, sub);
           }
         });
 
         setEvents(eventsData);
 
-        // Calculate accurate stats from events and submissions
-        let totalForms = 0;
-        let completed = 0;
-        let pending = 0;
+        // Calculate activity stats (Activity Model)
+        let totalAssignedForms = 0;
+        let totalActivitiesLogged = 0;
+        let activeDrafts = 0;
+
+        let totalPendingForms = 0;
 
         const enrichedEvents = eventsData.map(event => {
           let eventTotalForms = 0;
-          let eventCompletedForms = 0;
+          let eventActivitiesLogged = 0;
 
           if (event.forms) {
             event.forms.forEach(formItem => {
-              const formId = formItem.formId?._id || formItem.formId;
-              totalForms++;
+              const fId = (formItem.formId?._id || formItem.formId).toString();
+              totalAssignedForms++;
               eventTotalForms++;
-              
-              if (submissionMap.has(formId)) {
-                completed++;
-                eventCompletedForms++;
-              } else {
-                pending++;
+
+              // Find all submissions for this form by this worker
+              const formSubmissions = submissionsData.filter(sub => 
+                (sub.formId?._id || sub.formId).toString() === fId
+              );
+
+              if (formSubmissions.length === 0) {
+                totalPendingForms++;
               }
+
+              eventActivitiesLogged += formSubmissions.length;
+              totalActivitiesLogged += formSubmissions.length;
             });
           }
 
           return {
             ...event,
             totalForms: eventTotalForms,
-            completedForms: eventCompletedForms,
-            isFullyCompleted: eventTotalForms > 0 && eventTotalForms === eventCompletedForms
+            activitiesLogged: eventActivitiesLogged,
+            isFullyCompleted: false // In activity model, an event is never truly "finished" until deadline
           };
         });
 
         setEvents(enrichedEvents);
         setStats({
-          totalForms,
-          completed,
-          pending,
-          completionRate: totalForms > 0 ? Math.round((completed / totalForms) * 100) : 0,
+          totalForms: totalAssignedForms,
+          completed: totalActivitiesLogged,
+          pending: totalPendingForms,
+          completionRate: totalAssignedForms > 0 ? Math.round(((totalAssignedForms - totalPendingForms) / totalAssignedForms) * 100) : 0,
         });
       }
 
@@ -126,7 +133,7 @@ const FieldWorkerDashboard = () => {
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Assigned Forms */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -138,37 +145,28 @@ const FieldWorkerDashboard = () => {
             </div>
           </div>
 
-          {/* Completed */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* Activities Logged */}
+          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold">Completed</p>
-                <h3 className="text-3xl font-bold text-green-600 mt-2">{stats.completed}</h3>
+                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Activities Logged</p>
+                <h3 className="text-4xl font-black text-green-600 mt-2">{stats.completed}</h3>
               </div>
               <FiCheckCircle className="h-10 w-10 text-green-600" />
             </div>
+            <p className="text-xs text-gray-500 mt-3">Total field reports submitted</p>
           </div>
 
-          {/* Pending */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* Pending Submissions */}
+          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold">Pending</p>
-                <h3 className="text-3xl font-bold text-yellow-600 mt-2">{stats.pending}</h3>
+                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Pending Submissions</p>
+                <h3 className="text-4xl font-black text-yellow-600 mt-2">{stats.pending}</h3>
               </div>
               <FiClock className="h-10 w-10 text-yellow-600" />
             </div>
-          </div>
-
-          {/* Completion Rate */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-semibold">Completion Rate</p>
-                <h3 className="text-3xl font-bold text-blue-600 mt-2">{stats.completionRate}%</h3>
-              </div>
-              <FiTrendingUp className="h-10 w-10 text-blue-600" />
-            </div>
+            <p className="text-xs text-gray-500 mt-3">Forms still awaiting your first response</p>
           </div>
         </div>
 
@@ -206,19 +204,19 @@ const FieldWorkerDashboard = () => {
                 <div
                   key={event._id}
                   className="flex items-center justify-between border-b pb-4 hover:bg-gray-50 p-4 rounded transition cursor-pointer"
-                  onClick={() => navigate('/worker/events')}
+                  onClick={() => navigate(`/worker/event/${event._id}`)}
                 >
                   <div>
                     <p className="font-semibold text-gray-800">{event.name}</p>
                     <p className="text-gray-500 text-sm">
-                      {event.completedForms} / {event.totalForms} forms completed • Status: {event.isFullyCompleted ? 'Completed' : 'Active'}
+                      {event.activitiesLogged} activities logged • {event.totalForms} assigned forms
                     </p>
                   </div>
                   <button
                     className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate('/worker/events');
+                      navigate(`/worker/event/${event._id}`);
                     }}
                   >
                     View <FiArrowRight />
@@ -246,6 +244,13 @@ const FieldWorkerDashboard = () => {
             >
               <FiCheckCircle className="h-5 w-5" />
               View My Submissions
+            </button>
+            <button 
+              onClick={() => navigate('/worker/drafts')}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition inline-flex items-center justify-center gap-2"
+            >
+              <FiSave className="h-5 w-5" />
+              View My Drafts
             </button>
           </div>
         </div>

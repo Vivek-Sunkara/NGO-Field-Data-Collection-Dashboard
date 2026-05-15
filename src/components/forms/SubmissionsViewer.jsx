@@ -21,15 +21,18 @@ const SubmissionsViewer = () => {
   const [filters, setFilters] = useState({
     eventId: urlEventId || '',
     formId: urlFormId || '',
+    workerId: searchParams.get('workerId') || '',
     startDate: '',
     endDate: '',
   });
 
   const [availableEvents, setAvailableEvents] = useState([]);
   const [availableForms, setAvailableForms] = useState([]);
+  const [availableWorkers, setAvailableWorkers] = useState([]);
 
   useEffect(() => {
     loadEvents();
+    loadWorkers();
   }, []);
 
   useEffect(() => {
@@ -52,6 +55,17 @@ const SubmissionsViewer = () => {
       }
     } catch (error) {
       console.error('Failed to load events:', error);
+    }
+  };
+
+  const loadWorkers = async () => {
+    try {
+      const response = await api.get('/admin/workers');
+      if (response.data.success) {
+        setAvailableWorkers(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load workers:', error);
     }
   };
 
@@ -214,6 +228,19 @@ const SubmissionsViewer = () => {
             {availableForms.map(form => (
               <option key={form.formId} value={form.formId}>
                 {form.title}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.workerId}
+            onChange={e => handleFilterChange('workerId', e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Filter by Worker</option>
+            {availableWorkers.map(worker => (
+              <option key={worker._id} value={worker._id}>
+                {worker.name}{worker.email ? ` (${worker.email})` : ''}
               </option>
             ))}
           </select>

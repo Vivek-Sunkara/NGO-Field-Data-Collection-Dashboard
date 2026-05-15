@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiFileText, FiCalendar, FiMapPin, FiArrowRight, FiSearch } from 'react-icons/fi';
+import { FiFileText, FiCalendar, FiMapPin, FiArrowRight, FiSearch, FiSave } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import api from '@/api/client';
 import Loading from '@/components/Loading';
-
 const WorkerSubmissions = () => {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-
   useEffect(() => {
     fetchSubmissions();
   }, []);
-
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
@@ -28,15 +25,12 @@ const WorkerSubmissions = () => {
       setLoading(false);
     }
   };
-
   const filteredSubmissions = submissions.filter(sub => 
     sub.formId?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sub.eventId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sub.location?.city?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   if (loading) return <Loading />;
-
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -44,6 +38,14 @@ const WorkerSubmissions = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">My Submissions</h1>
             <p className="text-gray-600 mt-1">Review all your submitted field data</p>
+          </div>
+          <div className="flex flex-wrap gap-3 justify-start md:justify-end">
+            <button
+              onClick={() => navigate('/worker/drafts')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+            >
+              <FiSave className="h-4 w-4" /> View Drafts
+            </button>
           </div>
           
           <div className="relative">
@@ -57,7 +59,6 @@ const WorkerSubmissions = () => {
             />
           </div>
         </div>
-
         {filteredSubmissions.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100">
             <FiFileText className="mx-auto h-16 w-16 text-gray-200 mb-4" />
@@ -107,5 +108,4 @@ const WorkerSubmissions = () => {
     </MainLayout>
   );
 };
-
 export default WorkerSubmissions;

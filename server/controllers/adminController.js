@@ -301,8 +301,56 @@ export const getDashboardStats = async (req, res) => {
     const activeEvents = await Event.countDocuments({ status: 'active' });
     const totalForms = await Form.countDocuments();
     const totalSubmissions = await DynamicSubmission.countDocuments({ status: 'submitted' });
-    const totalPendingSubmissions = await DynamicDraft.countDocuments();
     const totalWorkers = await User.countDocuments({ role: 'Field Worker' });
+
+    const totalDrafts = await DynamicDraft.countDocuments();
+
+    const submittedFormWorkers = await DynamicSubmission.aggregate([
+      { $group: { _id: { formId: '$formId', workerId: '$workerId' } } },
+    ]);
+    const submittedPairs = new Set(
+      submittedFormWorkers.map(item => `${item._id.formId}:${item._id.workerId}`)
+    );
+
+    const draftDocs = await DynamicDraft.find();
+    const draftPairs = new Set(
+      draftDocs.map(item => `${item.formId}:${item.workerId}`)
+    );
+
+    const allAssignments = await Event.aggregate([
+      {
+        $lookup: {
+          from: 'forms',
+          localField: 'forms.formId',
+          foreignField: '_id',
+          as: 'formList',
+        },
+      },
+      { $unwind: '$formList' },
+      { $unwind: '$assignedWorkers' },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'assignedWorkers.workerId',
+          foreignField: '_id',
+          as: 'worker',
+        },
+      },
+      { $unwind: '$worker' },
+      {
+        $project: {
+          formId: '$formList._id',
+          workerId: '$worker._id',
+        },
+      },
+    ]);
+
+    const pendingAssignments = allAssignments.filter(assignment => {
+      const pair = `${assignment.formId}:${assignment.workerId}`;
+      return !submittedPairs.has(pair) && !draftPairs.has(pair);
+    });
+
+    const totalPendingSubmissions = pendingAssignments.length;
 
     // Get recent submissions
     const recentSubmissions = await DynamicSubmission.find()
@@ -393,7 +441,13 @@ export const getPendingSubmissions = async (req, res) => {
       { $group: { _id: { formId: '$formId', workerId: '$workerId' } } },
     ]);
 
-    const submittedPairs = submittedFormWorkers.map(item => `${item._id.formId}:${item._id.workerId}`);
+    const submittedPairs = new Set(
+      submittedFormWorkers.map(item => `${item._id.formId}:${item._id.workerId}`)
+    );
+
+    const draftPairs = new Set(
+      drafts.map(item => `${item.formId}:${item.workerId}`)
+    );
 
     const allAssignments = await Event.aggregate([
       {
@@ -431,7 +485,7 @@ export const getPendingSubmissions = async (req, res) => {
 
     const pending = allAssignments.filter(assignment => {
       const pair = `${assignment.formId}:${assignment.workerId}`;
-      return !submittedPairs.includes(pair);
+      return !submittedPairs.has(pair) && !draftPairs.has(pair);
     });
 
     res.json({
@@ -439,7 +493,7 @@ export const getPendingSubmissions = async (req, res) => {
       data: {
         drafts,
         pending,
-        total: drafts.length + pending.length,
+        total:pending.length,
       },
     });
   } catch (error) {

@@ -352,13 +352,13 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px] overflow-hidden">
                               <div
                                 className={`h-2 rounded-full ${getCompletionColor(
                                   event.completionPercentage || 0
                                 )}`}
                                 style={{
-                                  width: `${event.completionPercentage || 0}%`,
+                                  width: `${Math.min(event.completionPercentage || 0, 100)}%`,
                                 }}
                               />
                             </div>

@@ -11,7 +11,7 @@ import {
   getSubmissionsByWorker,
   getSubmissionStats,
 } from '../controllers/submissionController.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, adminOrManager } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -60,12 +60,9 @@ router.get('/worker/:workerId', authMiddleware, getSubmissionsByWorker);
  */
 
 // Get all submissions with filters
-router.get('/', authMiddleware, getAllSubmissions);
-
+router.get('/', authMiddleware, adminOrManager, getAllSubmissions);
 // Get submission stats
-router.get('/stats', authMiddleware, getSubmissionStats);
-
+router.get('/stats', authMiddleware, adminOrManager, getSubmissionStats);
 // Get specific submission
-router.get('/:submissionId', authMiddleware, getSubmissionById);
-
+router.get('/:submissionId', authMiddleware, adminOrManager, getSubmissionById);
 export default router;

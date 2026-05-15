@@ -61,6 +61,21 @@ export const getFormSchema = async (req, res) => {
       });
     }
 
+    // RBAC: Check if worker is assigned to this event (Admins bypass this)
+    if (req.user.role !== 'Admin') {
+      const event = await Event.findById(form.eventId);
+      const isAssigned = event?.assignedWorkers.some(
+        (w) => w.workerId.toString() === req.user.id
+      );
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not assigned to the event associated with this form',
+        });
+      }
+    }
+
     // Check if form is expired
     const isExpired = isFormExpired(form.expiryDate);
 
@@ -108,6 +123,42 @@ export const getDraftForForm = async (req, res) => {
 };
 
 /**
+ * Get all drafts for the current worker
+ */
+export const getWorkerDrafts = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { page = 1, limit = 20 } = req.query;
+
+    const drafts = await DynamicDraft.find({ workerId })
+      .populate('formId', 'title expiryDate')
+      .populate('eventId', 'name')
+      .sort({ updatedAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await DynamicDraft.countDocuments({ workerId });
+
+    res.json({
+      success: true,
+      data: drafts,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch drafts',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Save or update draft
  */
 export const saveDraftForForm = async (req, res) => {
@@ -118,6 +169,21 @@ export const saveDraftForForm = async (req, res) => {
     const form = await Form.findById(formId);
     if (!form) {
       return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+
+    // RBAC: Check if worker is assigned to this event (Admins bypass)
+    if (req.user.role !== 'Admin') {
+      const event = await Event.findById(eventId);
+      const isAssigned = event?.assignedWorkers.some(
+        (w) => w.workerId.toString() === workerId
+      );
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not assigned to this event and cannot save drafts for it',
+        });
+      }
     }
 
     if (isFormExpired(form.expiryDate)) {
@@ -214,6 +280,21 @@ export const submitFormResponse = async (req, res) => {
     const form = await Form.findById(formId);
     if (!form) {
       return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+
+    // RBAC: Check if worker is assigned to this event (Admins bypass)
+    if (req.user.role !== 'Admin') {
+      const event = await Event.findById(eventId);
+      const isAssigned = event?.assignedWorkers.some(
+        (w) => w.workerId.toString() === workerId
+      );
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not assigned to this event and cannot submit data for it',
+        });
+      }
     }
 
     if (isFormExpired(form.expiryDate)) {
@@ -396,6 +477,17 @@ export const getSubmissionById = async (req, res) => {
       });
     }
 
+    // RBAC: Only the submitter or an admin can view the submission details
+    const isOwner = submission.workerId.toString() === req.user.id;
+    const isAdmin = req.user.role === 'Admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this submission',
+      });
+    }
+
     res.json({
       success: true,
       data: submission,
@@ -410,7 +502,64 @@ export const getSubmissionById = async (req, res) => {
 };
 
 /**
- * Check submission status and editability
+ * Update existing submission
+ */
+export const updateSubmissionResponse = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { responses, location, activityDate } = req.body;
+    const workerId = req.user.id;
+
+    const submission = await DynamicSubmission.findById(submissionId);
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+
+    // RBAC: Only owner can update
+    if (submission.workerId.toString() !== workerId) {
+      return res.status(403).json({ success: false, message: 'You can only update your own submissions' });
+    }
+
+    const form = await Form.findById(submission.formId);
+    if (isFormExpired(form.expiryDate)) {
+      return res.status(403).json({ success: false, message: 'Cannot update expired submission' });
+    }
+
+    submission.responses = responses || submission.responses;
+    submission.location = location || submission.location;
+    submission.activityDate = activityDate || submission.activityDate;
+    submission.updatedAt = new Date();
+
+    await submission.save();
+
+    await logAction(
+      workerId,
+      req.user.name,
+      'UPDATE',
+      'Submission',
+      submissionId,
+      form.title,
+      {},
+      req.ip,
+      'success'
+    );
+
+    res.json({
+      success: true,
+      message: 'Submission updated successfully',
+      data: submission,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update submission',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Check submission status and editability (Activity Model)
  */
 export const checkSubmissionStatus = async (req, res) => {
   try {
@@ -418,20 +567,35 @@ export const checkSubmissionStatus = async (req, res) => {
     const { formId } = req.params;
 
     const form = await Form.findById(formId);
-    const submission = await DynamicSubmission.findOne({ workerId, formId });
+    if (!form) {
+      return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+
+    const submissions = await DynamicSubmission.find({ workerId, formId })
+      .sort({ submittedAt: -1 });
+    
     const draft = await DynamicDraft.findOne({ workerId, formId });
 
     const isExpired = isFormExpired(form.expiryDate);
-    const canEdit = !isExpired && (!submission || submission.status !== 'submitted');
+    
+    // In activity model, you can always create a new submission if not expired
+    const canCreateNew = !isExpired;
+    
+    // You can edit the latest submission if it's recent (optional limit) or simply if not expired
+    const latestSubmission = submissions.length > 0 ? submissions[0] : null;
+    const canEditLatest = !isExpired && latestSubmission;
 
     res.json({
       success: true,
       data: {
-        hasSubmission: !!submission,
+        hasSubmission: submissions.length > 0,
+        submissionCount: submissions.length,
         hasDraft: !!draft,
         isExpired,
-        canEdit,
-        submission: submission || null,
+        canCreateNew,
+        canEditLatest,
+        latestSubmission,
+        submissions: submissions, // Return history
         draft: draft || null,
       },
     });

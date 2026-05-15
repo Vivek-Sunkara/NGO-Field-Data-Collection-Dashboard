@@ -46,13 +46,13 @@ const SubmissionDetailViewer = ({ isWorkerView = false }) => {
       case 'image':
         if (Array.isArray(value)) {
           return (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-4 justify-start">
               {value.map((img, idx) => (
                 <img
                   key={idx}
                   src={img}
                   alt={`Upload ${idx + 1}`}
-                  className="w-24 h-24 object-cover rounded border"
+                  className="w-64 h-64 md:w-72 md:h-72 object-cover rounded border shadow-sm"
                 />
               ))}
             </div>

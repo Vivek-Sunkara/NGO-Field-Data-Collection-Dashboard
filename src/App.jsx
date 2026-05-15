@@ -22,8 +22,10 @@ import CreateFormPage from './pages/admin/CreateFormPage';
 import FieldWorkerDashboard from './pages/worker/FieldWorkerDashboard';
 import FieldSubmissionForm from './pages/worker/FieldSubmissionForm';
 import WorkerEvents from './pages/worker/WorkerEvents';
+import WorkerEventDetail from './pages/worker/WorkerEventDetail';
 import WorkerFormPage from './pages/worker/WorkerFormPage';
 import WorkerSubmissions from './pages/worker/WorkerSubmissions';
+import WorkerDrafts from './pages/worker/WorkerDrafts';
 
 // Error Pages
 import Unauthorized from './pages/Unauthorized';
@@ -123,6 +125,14 @@ function App() {
             }
           />
           <Route
+            path="/worker/event/:eventId"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkerEventDetail />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
             path="/worker/forms/:formId"
             element={
               <RoleProtectedRoute allowedRoles={['Field Worker']}>
@@ -151,6 +161,14 @@ function App() {
             element={
               <RoleProtectedRoute allowedRoles={['Field Worker']}>
                 <WorkerSubmissions />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/drafts"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkerDrafts />
               </RoleProtectedRoute>
             }
           />

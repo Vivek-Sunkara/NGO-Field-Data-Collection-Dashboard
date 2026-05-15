@@ -133,10 +133,10 @@ const FormStatusTracker = ({ formId, onBack }) => {
           <h3 className="text-sm font-semibold text-gray-700">Overall Completion Progress</h3>
           <span className="text-sm font-bold text-blue-600">{metrics.completionPercentage}%</span>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-3">
+        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
           <div 
             className="bg-blue-600 h-3 rounded-full transition-all duration-1000"
-            style={{ width: `${metrics.completionPercentage}%` }}
+            style={{ width: `${Math.min(metrics.completionPercentage, 100)}%` }}
           />
         </div>
       </div>

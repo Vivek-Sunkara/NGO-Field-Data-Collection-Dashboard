@@ -122,9 +122,15 @@ const WorkerEvents = () => {
             {events.map((event) => (
               <div key={event._id} className="bg-white rounded-lg shadow hover:shadow-md transition p-6">
                 {/* Event Header */}
-                <div className="flex items-start justify-between mb-4">
+                <div 
+                  className="flex items-start justify-between mb-4 cursor-pointer hover:opacity-80 transition"
+                  onClick={() => navigate(`/worker/event/${event._id}`)}
+                >
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800 mb-1">{event.name}</h2>
+                    <h2 className="text-xl font-bold text-gray-800 mb-1 flex items-center gap-2">
+                      {event.name}
+                      <FiArrowRight className="text-blue-500 text-sm" />
+                    </h2>
                     {event.description && (
                       <p className="text-gray-600 text-sm">{event.description}</p>
                     )}
@@ -172,8 +178,10 @@ const WorkerEvents = () => {
                             <button
                               onClick={() => {
                                 if (formItem.statusInfo?.hasSubmission) {
-                                  const subId = formItem.statusInfo.submission?._id || formItem.statusInfo.submission;
-                                  navigate(`/worker/submissions/${subId}`);
+                                  const subId = formItem.statusInfo.latestSubmission?._id || formItem.statusInfo.latestSubmission;
+                                  if (subId) {
+                                    navigate(`/worker/submissions/${subId}`);
+                                  }
                                 } else if (!isExpired) {
                                   navigate(`/worker/forms/${form._id}`);
                                 }
