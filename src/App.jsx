@@ -19,6 +19,7 @@ import SubmissionDetailViewer from './components/admin/SubmissionDetailViewer';
 import AuditLogViewer from './pages/admin/AuditLogViewer';
 import CreateEventPage from './pages/admin/CreateEventPage';
 import CreateFormPage from './pages/admin/CreateFormPage';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
 import FieldWorkerDashboard from './pages/worker/FieldWorkerDashboard';
 import FieldSubmissionForm from './pages/worker/FieldSubmissionForm';
 import WorkerEvents from './pages/worker/WorkerEvents';
@@ -26,6 +27,7 @@ import WorkerEventDetail from './pages/worker/WorkerEventDetail';
 import WorkerFormPage from './pages/worker/WorkerFormPage';
 import WorkerSubmissions from './pages/worker/WorkerSubmissions';
 import WorkerDrafts from './pages/worker/WorkerDrafts';
+import WorkerAnalytics from './pages/worker/WorkerAnalytics';
 
 // Error Pages
 import Unauthorized from './pages/Unauthorized';
@@ -63,6 +65,14 @@ function App() {
             element={
               <RoleProtectedRoute allowedRoles={['Admin', 'NGO_Manager']}>
                 <AdminDashboard />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <RoleProtectedRoute allowedRoles={['Admin', 'NGO_Manager']}>
+                <AdminAnalytics />
               </RoleProtectedRoute>
             }
           />
@@ -165,6 +175,14 @@ function App() {
             }
           />
           <Route
+            path="/worker/submissions/pending"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkerSubmissions />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
             path="/worker/drafts"
             element={
               <RoleProtectedRoute allowedRoles={['Field Worker']}>
@@ -177,6 +195,14 @@ function App() {
             element={
               <RoleProtectedRoute allowedRoles={['Field Worker']}>
                 <SubmissionDetailViewer isWorkerView={true} />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/analytics"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkerAnalytics />
               </RoleProtectedRoute>
             }
           />

@@ -1,23 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FiFileText, FiCalendar, FiMapPin, FiArrowRight, FiSearch, FiSave } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import api from '@/api/client';
 import Loading from '@/components/Loading';
 const WorkerSubmissions = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [submissions, setSubmissions] = useState([]);
+  const [pendingForms, setPendingForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const statusParam = new URLSearchParams(location.search).get('status');
+  const statusFilter = location.pathname.endsWith('/pending')
+    ? 'pending'
+    : statusParam === 'submitted'
+    ? 'submitted'
+    : 'all';
+
+  const pageTitle =
+    statusFilter === 'pending'
+      ? 'Pending Submissions'
+      : statusFilter === 'submitted'
+      ? 'Submitted Reports'
+      : 'My Submissions';
+
+  const pageDescription =
+    statusFilter === 'pending'
+      ? 'All currently pending forms assigned to you.'
+      : statusFilter === 'submitted'
+      ? 'Review all of your submitted field data.'
+      : 'Review all your submitted field data.';
+
   useEffect(() => {
     fetchSubmissions();
-  }, []);
+  }, [statusFilter, location.pathname]);
+
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/forms/submissions');
-      if (response.data.success) {
-        setSubmissions(response.data.data);
+
+      if (statusFilter === 'pending') {
+        const [eventsResponse, submissionsResponse] = await Promise.all([
+          api.get('/forms/events'),
+          api.get('/forms/submissions'),
+        ]);
+
+        if (eventsResponse.data.success && submissionsResponse.data.success) {
+          const events = eventsResponse.data.data || [];
+          const submittedFormIds = new Set(
+            (submissionsResponse.data.data || []).map((sub) =>
+              (sub.formId?._id || sub.formId).toString()
+            )
+          );
+
+          const pending = [];
+          events.forEach((event) => {
+            event.forms?.forEach((formItem) => {
+              const formId = (formItem.formId?._id || formItem.formId).toString();
+              if (!submittedFormIds.has(formId)) {
+                pending.push({
+                  formId,
+                  title: formItem.formId?.title || 'Untitled Form',
+                  eventId: event._id,
+                  eventName: event.name,
+                  expiryDate: formItem.formId?.expiryDate,
+                  status: 'pending',
+                });
+              }
+            });
+          });
+
+          setPendingForms(pending);
+        }
+      } else {
+        const response = await api.get('/forms/submissions');
+        if (response.data.success) {
+          setSubmissions(response.data.data);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
@@ -25,10 +86,20 @@ const WorkerSubmissions = () => {
       setLoading(false);
     }
   };
-  const filteredSubmissions = submissions.filter(sub => 
-    sub.formId?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sub.eventId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sub.location?.city?.toLowerCase().includes(searchTerm.toLowerCase())
+  const displayItems =
+    statusFilter === 'pending'
+      ? pendingForms
+      : statusFilter === 'submitted'
+      ? submissions.filter((sub) => sub.status === 'submitted')
+      : submissions;
+
+  const filteredSubmissions = displayItems.filter((sub) =>
+    (statusFilter === 'pending'
+      ? sub.title?.toLowerCase()
+      : sub.formId?.title?.toLowerCase()
+    )?.includes(searchTerm.toLowerCase()) ||
+    sub.eventName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (statusFilter !== 'pending' ? sub.location?.city?.toLowerCase() : false)
   );
   if (loading) return <Loading />;
   return (
@@ -36,8 +107,8 @@ const WorkerSubmissions = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Submissions</h1>
-            <p className="text-gray-600 mt-1">Review all your submitted field data</p>
+            <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
+            <p className="text-gray-600 mt-1">{pageDescription}</p>
           </div>
           <div className="flex flex-wrap gap-3 justify-start md:justify-end">
             <button
@@ -68,24 +139,34 @@ const WorkerSubmissions = () => {
         ) : (
           <div className="space-y-4">
             {filteredSubmissions.map((sub) => (
-              <div 
-                key={sub._id}
-                onClick={() => navigate(`/worker/submissions/${sub._id}`)}
+              <div
+                key={statusFilter === 'pending' ? sub.formId : sub._id}
+                onClick={() =>
+                  statusFilter === 'pending'
+                    ? navigate(`/worker/forms/${sub.formId}`)
+                    : navigate(`/worker/submissions/${sub._id}`)
+                }
                 className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all cursor-pointer group"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition">
-                      {sub.formId?.title || 'Untitled Form'}
+                      {statusFilter === 'pending' ? sub.title : sub.formId?.title || 'Untitled Form'}
                     </h3>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <FiCalendar className="text-blue-500" /> {new Date(sub.submittedAt).toLocaleDateString()}
-                      </span>
+                      {statusFilter === 'pending' ? (
+                        <span className="flex items-center gap-1">
+                          <FiCalendar className="text-blue-500" /> Expires: {sub.expiryDate ? new Date(sub.expiryDate).toLocaleDateString() : 'TBD'}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <FiCalendar className="text-blue-500" /> {new Date(sub.submittedAt).toLocaleDateString()}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1 font-medium text-gray-700">
-                        Event: {sub.eventId?.name || '—'}
+                        Event: {sub.eventName || sub.eventId?.name || '—'}
                       </span>
-                      {sub.location && (
+                      {statusFilter !== 'pending' && sub.location && (
                         <span className="flex items-center gap-1">
                           <FiMapPin className="text-red-500" /> {sub.location.state}, {sub.location.city}
                         </span>
@@ -94,8 +175,10 @@ const WorkerSubmissions = () => {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wider">
-                      Submitted
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      statusFilter === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {statusFilter === 'pending' ? 'Pending' : 'Submitted'}
                     </span>
                     <FiArrowRight className="text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>

@@ -12,6 +12,7 @@ import {
   FiPlus,
   FiTrash2,
   FiEdit,
+  FiBarChart2,
 } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/hooks/useAuth';
@@ -249,6 +250,12 @@ const AdminDashboard = () => {
             className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
           >
             <FiPlus /> Create Form
+          </button>
+          <button
+            onClick={() => navigate('/admin/analytics')}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition font-medium"
+          >
+            <FiBarChart2 /> Analytics
           </button>
         </div>
 

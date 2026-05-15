@@ -19,6 +19,7 @@ const FieldWorkerDashboard = () => {
     completed: 0,
     pending: 0,
     completionRate: 0,
+    drafts: 0,
   });
 
   useEffect(() => {
@@ -53,8 +54,6 @@ const FieldWorkerDashboard = () => {
         // Calculate activity stats (Activity Model)
         let totalAssignedForms = 0;
         let totalActivitiesLogged = 0;
-        let activeDrafts = 0;
-
         let totalPendingForms = 0;
 
         const enrichedEvents = eventsData.map(event => {
@@ -90,19 +89,31 @@ const FieldWorkerDashboard = () => {
         });
 
         setEvents(enrichedEvents);
-        setStats({
+        setStats((prev) => ({
           totalForms: totalAssignedForms,
           completed: totalActivitiesLogged,
           pending: totalPendingForms,
           completionRate: totalAssignedForms > 0 ? Math.round(((totalAssignedForms - totalPendingForms) / totalAssignedForms) * 100) : 0,
-        });
+          drafts: prev.drafts,
+        }));
       }
 
       // Fetch notifications
-      const notifResponse = await api.get('/admin/notifications');
+      const [notifResponse, draftsResponse] = await Promise.all([
+        api.get('/admin/notifications'),
+        api.get('/forms/drafts'),
+      ]);
+
       if (notifResponse.data.success) {
         setNotifications(notifResponse.data.data || []);
       }
+
+      const draftCount = draftsResponse.data.success ? (draftsResponse.data.data || []).length : 0;
+
+      setStats((prev) => ({
+        ...prev,
+        drafts: draftCount,
+      }));
     } catch (err) {
       console.error('Error fetching worker data:', err);
       showToast('Failed to load dashboard', TOAST_TYPES.ERROR);
@@ -133,7 +144,7 @@ const FieldWorkerDashboard = () => {
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Assigned Forms */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -146,7 +157,10 @@ const FieldWorkerDashboard = () => {
           </div>
 
           {/* Activities Logged */}
-          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+          <div
+            className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500 hover:shadow-xl transition cursor-pointer"
+            onClick={() => navigate('/worker/submissions?status=submitted')}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Activities Logged</p>
@@ -158,7 +172,10 @@ const FieldWorkerDashboard = () => {
           </div>
 
           {/* Pending Submissions */}
-          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
+          <div
+            className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500 hover:shadow-xl transition cursor-pointer"
+            onClick={() => navigate('/worker/submissions/pending')}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Pending Submissions</p>
@@ -167,6 +184,21 @@ const FieldWorkerDashboard = () => {
               <FiClock className="h-10 w-10 text-yellow-600" />
             </div>
             <p className="text-xs text-gray-500 mt-3">Forms still awaiting your first response</p>
+          </div>
+
+          {/* Drafts */}
+          <div
+            className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-slate-500 hover:shadow-xl transition cursor-pointer"
+            onClick={() => navigate('/worker/drafts')}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Drafts</p>
+                <h3 className="text-4xl font-black text-slate-700 mt-2">{stats.drafts}</h3>
+              </div>
+              <FiSave className="h-10 w-10 text-slate-600" />
+            </div>
+            <p className="text-xs text-gray-500 mt-3">Saved drafts waiting to be completed</p>
           </div>
         </div>
 
@@ -245,12 +277,13 @@ const FieldWorkerDashboard = () => {
               <FiCheckCircle className="h-5 w-5" />
               View My Submissions
             </button>
+            
             <button 
-              onClick={() => navigate('/worker/drafts')}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition inline-flex items-center justify-center gap-2"
+              onClick={() => navigate('/worker/analytics')}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition inline-flex items-center justify-center gap-2"
             >
-              <FiSave className="h-5 w-5" />
-              View My Drafts
+              <FiTrendingUp className="h-5 w-5" />
+              View My Analytics
             </button>
           </div>
         </div>

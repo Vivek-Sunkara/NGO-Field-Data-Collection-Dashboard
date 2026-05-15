@@ -16,6 +16,7 @@ const authRoutes = (await import('./routes/auth.js')).default;
 const submissionRoutes = (await import('./routes/submissions.js')).default;
 const dynamicFormRoutes = (await import('./routes/dynamicForms.js')).default;
 const adminRoutes = (await import('./routes/admin.js')).default;
+const analyticsRoutes = (await import('./routes/analytics.js')).default;
 const upload = (await import('./middleware/upload.js')).default;
 const { errorHandler, notFound } = await import('./middleware/errorHandler.js');
 const { initializeMailer } = await import('./services/mailService.js');
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/forms', dynamicFormRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Image Upload Route
 app.post('/api/upload', upload.array('images', 10), (req, res) => {
