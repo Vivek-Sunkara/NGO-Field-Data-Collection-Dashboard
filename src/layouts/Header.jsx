@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '@/useAuth';
+import { FiHome, FiLogOut, FiActivity } from 'react-icons/fi';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -15,10 +16,40 @@ const Header = () => {
   return (
     <header className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <h1 className="text-2xl font-bold text-blue-600">
-            🏢 NGO Dashboard
+        <div className="flex items-center gap-8">
+          <h1 
+            className="text-2xl font-bold text-blue-600 cursor-pointer flex items-center gap-2"
+            onClick={() => {
+              if (user?.role === 'Admin' || user?.role === 'NGO_Manager') {
+                navigate('/admin/dashboard');
+              } else if (user?.role === 'Field Worker') {
+                navigate('/worker/dashboard');
+              } else {
+                navigate('/');
+              }
+            }}
+          >
+            <FiActivity className="h-8 w-8" />
+            <span>NGO Dashboard</span>
           </h1>
+          
+          {user && (
+            <nav className="hidden md:flex items-center gap-4">
+              <button
+                onClick={() => {
+                  if (user.role === 'Admin' || user.role === 'NGO_Manager') {
+                    navigate('/admin/dashboard');
+                  } else {
+                    navigate('/worker/dashboard');
+                  }
+                }}
+                className="text-gray-600 hover:text-blue-600 font-medium flex items-center gap-1 transition-colors"
+              >
+                <FiHome className="w-5 h-5" />
+                Dashboard
+              </button>
+            </nav>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -55,9 +86,9 @@ const Header = () => {
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-50">
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold rounded-lg"
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold rounded-lg flex items-center gap-2"
                 >
-                  Logout
+                  <FiLogOut /> Logout
                 </button>
               </div>
             )}
