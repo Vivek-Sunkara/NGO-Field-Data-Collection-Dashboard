@@ -31,6 +31,9 @@ import WorkerFormPage from './pages/worker/WorkerFormPage';
 import WorkerSubmissions from './pages/worker/WorkerSubmissions';
 import WorkerDrafts from './pages/worker/WorkerDrafts';
 import WorkerAnalytics from './pages/worker/WorkerAnalytics';
+import WorkersDirectoryPage from './pages/profiles/WorkersDirectoryPage';
+import WorkerProfilePage from './pages/profiles/WorkerProfilePage';
+import WorkerProfileRedirect from './pages/profiles/WorkerProfileRedirect';
 
 // Error Pages
 import Unauthorized from './pages/Unauthorized';
@@ -130,6 +133,22 @@ function App() {
               </RoleProtectedRoute>
             }
           />
+          <Route
+            path="/admin/workers"
+            element={
+              <RoleProtectedRoute allowedRoles={['Admin', 'NGO_Manager']}>
+                <WorkersDirectoryPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/workers/:workerId"
+            element={
+              <RoleProtectedRoute allowedRoles={['Admin', 'NGO_Manager']}>
+                <WorkerProfilePage />
+              </RoleProtectedRoute>
+            }
+          />
 
           {/* Field Worker Routes */}
           <Route
@@ -217,6 +236,30 @@ function App() {
             element={
               <RoleProtectedRoute allowedRoles={['Field Worker']}>
                 <WorkerAnalytics />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/workers"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkersDirectoryPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/workers/:workerId"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkerProfilePage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/worker/profile"
+            element={
+              <RoleProtectedRoute allowedRoles={['Field Worker']}>
+                <WorkerProfileRedirect />
               </RoleProtectedRoute>
             }
           />

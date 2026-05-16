@@ -6,7 +6,7 @@ import { WORKER_UI_LANGUAGES } from '@/constants/workerLanguages';
 import { getWorkerShell } from '@/i18n/workerShell';
 import { showToast, TOAST_TYPES } from '@/utils/toast';
 import ThemeToggle from '@/components/ThemeToggle';
-import { FiHome, FiLogOut, FiActivity, FiGlobe } from 'react-icons/fi';
+import { FiHome, FiLogOut, FiActivity, FiGlobe, FiUsers, FiUser } from 'react-icons/fi';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -59,7 +59,7 @@ const Header = () => {
               </h1>
 
               {user && (
-                <nav className="hidden md:flex items-center">
+                <nav className="hidden md:flex items-center gap-4">
                   <button
                     type="button"
                     onClick={() => {
@@ -74,6 +74,36 @@ const Header = () => {
                     <FiHome className="w-5 h-5" />
                     {isFieldWorker ? shell.navDashboard : 'Dashboard'}
                   </button>
+                  {isFieldWorker && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/worker/workers')}
+                        className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-1 transition-colors"
+                      >
+                        <FiUsers className="w-5 h-5" />
+                        Workers
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/worker/profile')}
+                        className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-1 transition-colors"
+                      >
+                        <FiUser className="w-5 h-5" />
+                        My Profile
+                      </button>
+                    </>
+                  )}
+                  {(user.role === 'Admin' || user.role === 'NGO_Manager') && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/admin/workers')}
+                      className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-1 transition-colors"
+                    >
+                      <FiUsers className="w-5 h-5" />
+                      Workers
+                    </button>
+                  )}
                 </nav>
               )}
             </div>

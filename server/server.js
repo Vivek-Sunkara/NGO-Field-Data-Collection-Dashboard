@@ -19,6 +19,7 @@ const adminRoutes = (await import('./routes/admin.js')).default;
 const aiAnalysisRoutes = (await import('./routes/aiAnalysis.js')).default;
 const translationRoutes = (await import('./routes/translation.js')).default;
 const analyticsRoutes = (await import('./routes/analytics.js')).default;
+const profileRoutes = (await import('./routes/profiles.js')).default;
 const upload = (await import('./middleware/upload.js')).default;
 const { errorHandler, notFound } = await import('./middleware/errorHandler.js');
 const { initializeMailer } = await import('./services/mailService.js');
@@ -42,6 +43,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiAnalysisRoutes);
 app.use('/api/translate', translationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/profiles', profileRoutes);
 
 // Image Upload Route
 app.post('/api/upload', upload.array('images', 10), (req, res) => {
