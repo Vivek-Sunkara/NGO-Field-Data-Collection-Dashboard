@@ -4,6 +4,7 @@ import useAuth from '@/useAuth';
 import { validateLoginForm } from '@/utils/validation';
 import { showToast, formatErrorMessage, TOAST_TYPES } from '@/utils/toast';
 import { LoadingButton } from '@/components/Loading';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -64,23 +65,27 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <>
+      <div className="fixed top-4 right-4 z-[100]">
+        <ThemeToggle />
+      </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 dark:from-gray-900 dark:to-slate-900 flex items-center justify-center px-4 transition-colors">
+      <div className="bg-white dark:bg-gray-900 dark:border dark:border-gray-700 rounded-lg shadow-lg p-8 w-full max-w-md text-gray-900 dark:text-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">🏢</h1>
-          <h2 className="text-2xl font-bold text-gray-800">NGO Dashboard</h2>
-          <p className="text-gray-600 mt-2">Login to your account</p>
+          <h1 className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">🏢</h1>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">NGO Dashboard</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Login to your account</p>
         </div>
 
         {errors.submit && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
             {errors.submit}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">
+            <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
               Email Address
             </label>
             <input
@@ -89,8 +94,8 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="your@email.com"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:text-gray-100 ${
+                errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
             />
             {errors.email && (
@@ -99,7 +104,7 @@ const Login = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">
+            <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
               Password
             </label>
             <input
@@ -108,8 +113,8 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               placeholder="••••••••"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.password ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 dark:text-gray-100 ${
+                errors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
             />
             {errors.password && (
@@ -128,11 +133,11 @@ const Login = () => {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Don't have an account?{' '}
             <Link
               to="/register"
-              className="text-blue-600 font-semibold hover:underline"
+              className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
             >
               Register here
             </Link>
@@ -140,6 +145,7 @@ const Login = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -2,6 +2,7 @@ import Submission from '../models/Submission.js';
 import Draft from '../models/Draft.js';
 import { validateSubmission, validateDraft, calculateDraftCompletion } from '../utils/validation.js';
 import { saveUploadedFile, deleteUploadedFile } from '../utils/fileUpload.js';
+import { normalizeLegacySubmission } from '../utils/normalizeSubmissionLanguage.js';
 
 /**
  * CREATE SUBMISSION
@@ -9,7 +10,8 @@ import { saveUploadedFile, deleteUploadedFile } from '../utils/fileUpload.js';
  */
 export const createSubmission = async (req, res) => {
   try {
-    const { workerId, workerName, userRole, workerRegion, ...submissionData } = req.body;
+    const { workerId, workerName, userRole, workerRegion, sourceLanguage, ...rest } = req.body;
+    const submissionData = await normalizeLegacySubmission({ ...rest, sourceLanguage });
 
     // Validate submission data
     const validation = validateSubmission(submissionData);
@@ -79,7 +81,8 @@ export const createSubmission = async (req, res) => {
  */
 export const saveDraft = async (req, res) => {
   try {
-    const { workerId, workerName, draftId, ...draftData } = req.body;
+    const { workerId, workerName, draftId, sourceLanguage, ...rest } = req.body;
+    const draftData = await normalizeLegacySubmission({ ...rest, sourceLanguage });
 
     // Validate partial data
     const validation = validateDraft(draftData);

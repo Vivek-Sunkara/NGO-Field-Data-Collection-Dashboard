@@ -6,6 +6,14 @@ import User from '../models/User.js';
 import { sendSubmissionNotificationEmail } from '../services/mailService.js';
 import { createNotification } from '../services/notificationService.js';
 import { logAction } from '../services/auditService.js';
+import { normalizeDynamicSubmission } from '../utils/normalizeSubmissionLanguage.js';
+
+const isMissingDynamicAnswer = (value) => {
+  if (value === undefined || value === null) return true;
+  if (value === '') return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+};
 
 /**
  * Helper to check if a form is expired
@@ -206,11 +214,24 @@ export const getWorkerDrafts = async (req, res) => {
 export const saveDraftForForm = async (req, res) => {
   try {
     const workerId = req.user.id;
-    const { formId, eventId, responses } = req.body;
+    const { formId, eventId } = req.body;
+
+    if (!formId) {
+      return res.status(400).json({ success: false, message: 'Form ID is required' });
+    }
+
+    if (!eventId) {
+      return res.status(400).json({ success: false, message: 'Event ID is required' });
+    }
 
     const form = await Form.findById(formId);
     if (!form) {
       return res.status(404).json({ success: false, message: 'Form not found' });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
     // RBAC: Check if worker is assigned to this event (Admins bypass)
@@ -235,6 +256,13 @@ export const saveDraftForForm = async (req, res) => {
       });
     }
 
+    const { responses: normalizedResponses, location: normalizedLocation } =
+      await normalizeDynamicSubmission(req.body, form.fields);
+
+    const responses = normalizedResponses;
+    const location = normalizedLocation ?? req.body.location;
+    const activityDate = req.body.activityDate;
+
     // Calculate completion percentage
     const requiredFields = form.fields.filter(f => f.required);
     const filledFields = requiredFields.filter(f => responses[f.id] !== undefined && responses[f.id] !== null && responses[f.id] !== '');
@@ -250,8 +278,8 @@ export const saveDraftForForm = async (req, res) => {
         responses,
         workerName: req.user.name,
         workerRole: req.user.role,
-        location: req.body.location,
-        activityDate: req.body.activityDate || new Date(),
+        location,
+        activityDate: activityDate || new Date(),
         completionPercentage,
       },
       { upsert: true, new: true }
@@ -308,10 +336,25 @@ export const saveDraftForForm = async (req, res) => {
 export const submitFormResponse = async (req, res) => {
   try {
     const workerId = req.user.id;
-    const { formId, eventId, responses, location, activityDate } = req.body;
+    const { formId, eventId } = req.body;
+
+    // Validate required parameters
+    if (!formId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Form ID is required',
+      });
+    }
+
+    if (!eventId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event ID is required',
+      });
+    }
 
     // Validate location (Mandatory for submission)
-    if (!location || !location.state || !location.city) {
+    if (!req.body.location || !req.body.location.state || !req.body.location.city) {
       return res.status(400).json({
         success: false,
         message: 'Location (State & City) is required to submit this form',
@@ -346,11 +389,15 @@ export const submitFormResponse = async (req, res) => {
       });
     }
 
+    const { responses, location, activityDate: normalizedActivityDate } =
+      await normalizeDynamicSubmission(req.body, form.fields);
+    const activityDate = normalizedActivityDate ?? req.body.activityDate;
+
     // Validate required fields
     const requiredFields = form.fields.filter(f => f.required);
     const errors = {};
     for (const field of requiredFields) {
-      if (!responses[field.id]) {
+      if (isMissingDynamicAnswer(responses[field.id])) {
         errors[field.id] = `${field.label} is required`;
       }
     }
@@ -385,7 +432,20 @@ export const submitFormResponse = async (req, res) => {
 
     // Get populated data for notifications
     const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found',
+      });
+    }
+
     const worker = await User.findById(workerId);
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker not found',
+      });
+    }
 
     // Send email notifications to all admins
     const admins = await User.find({ role: 'Admin' });

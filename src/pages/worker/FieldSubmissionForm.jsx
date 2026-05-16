@@ -3,22 +3,26 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronRight, FiChevronLeft, FiSave, FiSend, FiAlertCircle, FiArrowLeft } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/useAuth';
+import { useWorkerLanguage } from '@/context/WorkerLanguageContext';
 import ActivityDetailsStep from '../../components/forms/steps/ActivityDetailsStep';
 import ParticipationStep from '../../components/forms/steps/ParticipationStep';
 import IssuesStep from '../../components/forms/steps/IssuesStep';
 import ReviewStep from '../../components/forms/steps/ReviewStep';
 import api from '@/api/client';
 import Toast from '@/components/Toast';
+import FormLanguageBar from '@/components/forms/FormLanguageBar';
+import { LEGACY_FORM_UI } from '@/constants/legacyFormSchema';
 
-const STEPS = [
-  { id: 1, title: 'Activity Details', component: ActivityDetailsStep },
-  { id: 2, title: 'Participation', component: ParticipationStep },
-  { id: 3, title: 'Issues & Evidence', component: IssuesStep },
-  { id: 4, title: 'Review & Submit', component: ReviewStep },
+const STEP_COMPONENTS = [
+  ActivityDetailsStep,
+  ParticipationStep,
+  IssuesStep,
+  ReviewStep,
 ];
 
 const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
   const { user } = useAuth();
+  const { preferredLanguage, setPreferredLanguage, translationRefreshNonce } = useWorkerLanguage();
   const navigate = useNavigate();
   const { draftId: urlDraftId } = useParams();
   const actualDraftId = draftId || urlDraftId || null;
@@ -50,6 +54,50 @@ const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
+  const [formUi, setFormUi] = useState(LEGACY_FORM_UI);
+  const [translating, setTranslating] = useState(false);
+
+  const STEPS = (formUi.steps || LEGACY_FORM_UI.steps).map((step, index) => ({
+    id: step.id ?? index + 1,
+    title: step.title,
+    component: STEP_COMPONENTS[index],
+  }));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const applyLanguage = async () => {
+      if (preferredLanguage === 'en') {
+        if (!cancelled) setFormUi(LEGACY_FORM_UI);
+        return;
+      }
+      try {
+        setTranslating(true);
+        const response = await api.post('/translate/form-ui', {
+          formType: 'legacy',
+          targetLanguage: preferredLanguage,
+        });
+        if (!cancelled && response.data.success) {
+          setFormUi(response.data.ui);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setFormUi(LEGACY_FORM_UI);
+          setToast({
+            type: 'error',
+            message: error.response?.data?.message || 'Translation failed',
+          });
+        }
+      } finally {
+        if (!cancelled) setTranslating(false);
+      }
+    };
+
+    applyLanguage();
+    return () => {
+      cancelled = true;
+    };
+  }, [preferredLanguage, translationRefreshNonce]);
 
   // Load draft if provided
   useEffect(() => {
@@ -106,6 +154,35 @@ const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
     }
   };
 
+  const handleTranslateForm = async () => {
+    try {
+      setTranslating(true);
+      if (preferredLanguage === 'en') {
+        setFormUi(LEGACY_FORM_UI);
+        setToast({ type: 'success', message: 'Form displayed in English' });
+        return;
+      }
+      const response = await api.post('/translate/form-ui', {
+        formType: 'legacy',
+        targetLanguage: preferredLanguage,
+      });
+      if (response.data.success) {
+        setFormUi(response.data.ui);
+        setToast({
+          type: 'success',
+          message: `Form translated to ${preferredLanguage === 'te' ? 'Telugu' : 'Hindi'}`,
+        });
+      }
+    } catch (error) {
+      setToast({
+        type: 'error',
+        message: error.response?.data?.message || 'Translation failed',
+      });
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const handleSaveDraft = async () => {
     try {
       setLoading(true);
@@ -113,6 +190,7 @@ const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
         workerId: user.id,
         workerName: user.name,
         draftId: formData.draftId,
+        sourceLanguage: preferredLanguage,
         ...formData,
       };
 
@@ -150,6 +228,7 @@ const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
         userRole: 'field_worker',
         workerRegion: user.region || '',
         draftId: formData.draftId,
+        sourceLanguage: preferredLanguage,
         ...formData,
       };
 
@@ -206,7 +285,14 @@ const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
               <FiArrowLeft className="h-4 w-4" /> Back to Dashboard
             </button>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Submit Field Activity</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{formUi.title}</h1>
+          <FormLanguageBar
+            className="mt-3"
+            language={preferredLanguage}
+            onLanguageChange={setPreferredLanguage}
+            onTranslate={handleTranslateForm}
+            translating={translating}
+          />
           <p className="text-gray-600 text-sm mt-1">Step {currentStep} of {STEPS.length}</p>
 
           {/* Progress bar */}
@@ -264,6 +350,7 @@ const FieldSubmissionForm = ({ draftId = null, onSuccess = null }) => {
             formData={formData}
             onChange={handleInputChange}
             errors={errors}
+            ui={formUi}
           />
         </div>
 

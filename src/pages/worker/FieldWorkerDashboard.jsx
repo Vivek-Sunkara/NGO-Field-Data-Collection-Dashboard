@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { FiSmile, FiFileText, FiCheckCircle, FiClock, FiTrendingUp, FiArrowRight, FiBell, FiSave } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/hooks/useAuth';
+import { useWorkerLanguage } from '@/context/WorkerLanguageContext';
+import { getWorkerShell } from '@/i18n/workerShell';
 import api from '@/api/client';
 import { showToast, TOAST_TYPES } from '@/utils/toast';
 import Loading from '@/components/Loading';
 
 const FieldWorkerDashboard = () => {
   const { user } = useAuth();
+  const { preferredLanguage } = useWorkerLanguage();
+  const t = getWorkerShell(preferredLanguage);
   const navigate = useNavigate();
   
   const [events, setEvents] = useState([]);
@@ -140,10 +144,10 @@ const FieldWorkerDashboard = () => {
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-green-600 to-green-800 text-white rounded-lg p-8">
           <h1 className="text-4xl font-bold mb-2">
-            Welcome, {user?.name}! <FiSmile className="inline h-10 w-10 text-white" />
+            {t.welcomeTitle(user?.name || '')} <FiSmile className="inline h-10 w-10 text-white" />
           </h1>
           <p className="text-green-100">
-            You're logged in as a <strong>Field Worker</strong>
+            {t.loggedInAs} <strong>{t.roleFieldWorker}</strong>
           </p>
         </div>
 
@@ -153,7 +157,7 @@ const FieldWorkerDashboard = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold">Assigned Forms</p>
+                <p className="text-gray-600 text-sm font-semibold">{t.assignedForms}</p>
                 <h3 className="text-3xl font-bold text-gray-800 mt-2">{stats.totalForms}</h3>
               </div>
               <FiFileText className="h-10 w-10 text-slate-600" />
@@ -167,6 +171,8 @@ const FieldWorkerDashboard = () => {
           >
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-gray-600 text-sm font-semibold">{t.completed}</p>
+                <h3 className="text-3xl font-bold text-green-600 mt-2">{stats.completed}</h3>
                 <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Activities Logged</p>
                 <h3 className="text-4xl font-black text-green-600 mt-2">{stats.completed}</h3>
               </div>
@@ -182,6 +188,8 @@ const FieldWorkerDashboard = () => {
           >
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-gray-600 text-sm font-semibold">{t.pending}</p>
+                <h3 className="text-3xl font-bold text-yellow-600 mt-2">{stats.pending}</h3>
                 <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Pending Submissions</p>
                 <h3 className="text-4xl font-black text-yellow-600 mt-2">{stats.pending}</h3>
               </div>
@@ -197,6 +205,8 @@ const FieldWorkerDashboard = () => {
           >
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-gray-600 text-sm font-semibold">{t.completionRate}</p>
+                <h3 className="text-3xl font-bold text-blue-600 mt-2">{stats.completionRate}%</h3>
                 <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Drafts</p>
                 <h3 className="text-4xl font-black text-slate-700 mt-2">{stats.drafts}</h3>
               </div>
@@ -211,7 +221,7 @@ const FieldWorkerDashboard = () => {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-4">
               <FiBell className="h-5 w-5 text-blue-600" />
-              <h2 className="text-lg font-bold text-blue-900">Recent Notifications ({notifications.length})</h2>
+              <h2 className="text-lg font-bold text-blue-900">{t.recentNotifications} ({notifications.length})</h2>
             </div>
             <div className="space-y-3">
               {notifications.slice(0, 5).map(notif => (
@@ -229,10 +239,10 @@ const FieldWorkerDashboard = () => {
 
         {/* Assigned Events */}
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Assigned Events ({events.length})</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">{t.yourAssignedEvents} ({events.length})</h2>
           {events.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              No events assigned yet. Check back later!
+              {t.noEventsDash}
             </p>
           ) : (
             <div className="space-y-4">
@@ -245,6 +255,7 @@ const FieldWorkerDashboard = () => {
                   <div>
                     <p className="font-semibold text-gray-800">{event.name}</p>
                     <p className="text-gray-500 text-sm">
+                      {t.formsCompletedLine(event.completedForms, event.totalForms)} • {t.status}: {event.isFullyCompleted ? t.statusCompleted : t.statusActive}
                       {event.activitiesLogged} activities logged • {event.totalForms} assigned forms
                     </p>
                   </div>
@@ -255,7 +266,7 @@ const FieldWorkerDashboard = () => {
                       navigate(`/worker/event/${event._id}`);
                     }}
                   >
-                    View <FiArrowRight />
+                    {t.view} <FiArrowRight />
                   </button>
                 </div>
               ))}
@@ -265,21 +276,21 @@ const FieldWorkerDashboard = () => {
 
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Quick Actions</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">{t.quickActions}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button 
               onClick={() => navigate('/worker/events')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition inline-flex items-center justify-center gap-2"
             >
               <FiFileText className="h-5 w-5" />
-              View My Events & Forms
+              {t.viewEventsForms}
             </button>
             <button 
               onClick={() => navigate('/worker/submissions')}
               className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition inline-flex items-center justify-center gap-2"
             >
               <FiCheckCircle className="h-5 w-5" />
-              View My Submissions
+              {t.viewSubmissions}
             </button>
             
             <button 

@@ -4,6 +4,7 @@ import useAuth from '@/useAuth';
 import { isValidOTP } from '@/utils/validation';
 import { showToast, formatErrorMessage, TOAST_TYPES } from '@/utils/toast';
 import { LoadingButton } from '@/components/Loading';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const VerifyRegistrationOTP = () => {
   const location = useLocation();
@@ -94,64 +95,70 @@ const VerifyRegistrationOTP = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center px-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">✉️</h1>
-          <h2 className="text-2xl font-bold text-gray-800">Verify Your Email</h2>
-          <p className="text-gray-600 mt-2">
-            We've sent a 6-digit OTP to<br />
-            <span className="font-semibold">{email}</span>
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">
-              Enter OTP
-            </label>
-            <input
-              type="text"
-              value={otp}
-              onChange={handleChange}
-              placeholder="000000"
-              maxLength="6"
-              className="w-full px-4 py-3 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-            />
-            <p className="text-sm text-gray-500 mt-2">
-              OTP expires in: <span className="font-bold">{formatTime(timeLeft)}</span>
+    <>
+      <div className="fixed top-4 right-4 z-[100]">
+        <ThemeToggle />
+      </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-600 dark:from-gray-900 dark:to-slate-900 flex items-center justify-center px-4 transition-colors">
+        <div className="bg-white dark:bg-gray-900 dark:border dark:border-gray-700 rounded-lg shadow-lg p-8 w-full max-w-md text-gray-900 dark:text-gray-100">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">✉️</h1>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Verify Your Email</h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              We've sent a 6-digit OTP to
+              <br />
+              <span className="font-semibold">{email}</span>
             </p>
           </div>
 
-          <LoadingButton
-            type="submit"
-            loading={loading}
-            disabled={loading || timeLeft === 0}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 disabled:opacity-50"
-          >
-            {loading ? 'Verifying...' : 'Verify OTP'}
-          </LoadingButton>
-        </form>
+          {error && (
+            <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 mb-2">Didn't receive the OTP?</p>
-          <LoadingButton
-            onClick={handleResendOTP}
-            loading={resendLoading}
-            disabled={resendLoading || timeLeft > 30}
-            className="text-blue-600 font-semibold hover:underline disabled:opacity-50"
-          >
-            {resendLoading ? 'Resending...' : 'Resend OTP'}
-          </LoadingButton>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                Enter OTP
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={handleChange}
+                placeholder="000000"
+                maxLength="6"
+                className="w-full px-4 py-3 text-center text-2xl font-bold border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-gray-100"
+              />
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                OTP expires in: <span className="font-bold">{formatTime(timeLeft)}</span>
+              </p>
+            </div>
+
+            <LoadingButton
+              type="submit"
+              loading={loading}
+              disabled={loading || timeLeft === 0}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 disabled:opacity-50"
+            >
+              {loading ? 'Verifying...' : 'Verify OTP'}
+            </LoadingButton>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-2">Didn't receive the OTP?</p>
+            <LoadingButton
+              onClick={handleResendOTP}
+              loading={resendLoading}
+              disabled={resendLoading || timeLeft > 30}
+              className="text-blue-600 dark:text-blue-400 font-semibold hover:underline disabled:opacity-50"
+            >
+              {resendLoading ? 'Resending...' : 'Resend OTP'}
+            </LoadingButton>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

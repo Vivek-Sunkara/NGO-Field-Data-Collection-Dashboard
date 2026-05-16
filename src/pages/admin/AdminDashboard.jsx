@@ -415,6 +415,13 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-sm flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
+                            onClick={() => handleEventClick(event._id)}
+                            className="text-purple-600 hover:text-purple-800 font-medium"
+                            title="View AI Analysis"
+                          >
+                            🤖 Analysis
+                          </button>
+                          <button
                             onClick={() => handleViewSubmissions(event._id)}
                             className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                           >

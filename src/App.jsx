@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
+import { WorkerLanguageProvider } from '@/context/WorkerLanguageContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { ToastContainer } from '@/components/Toast';
 
 // Route Guards
@@ -19,6 +21,7 @@ import SubmissionDetailViewer from './components/admin/SubmissionDetailViewer';
 import AuditLogViewer from './pages/admin/AuditLogViewer';
 import CreateEventPage from './pages/admin/CreateEventPage';
 import CreateFormPage from './pages/admin/CreateFormPage';
+import EventDetailsPage from './pages/admin/EventDetailsPage';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import FieldWorkerDashboard from './pages/worker/FieldWorkerDashboard';
 import FieldSubmissionForm from './pages/worker/FieldSubmissionForm';
@@ -32,11 +35,14 @@ import WorkerAnalytics from './pages/worker/WorkerAnalytics';
 // Error Pages
 import Unauthorized from './pages/Unauthorized';
 import NotFound from './pages/NotFound';
+import HomePage from './pages/HomePage';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
+    <ThemeProvider>
+      <Router>
+        <AuthProvider>
+          <WorkerLanguageProvider>
         <ToastContainer />
         <Routes>
           {/* Auth Routes */}
@@ -113,6 +119,14 @@ function App() {
             element={
               <RoleProtectedRoute allowedRoles={['Admin', 'NGO_Manager']}>
                 <CreateFormPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/events/:eventId"
+            element={
+              <RoleProtectedRoute allowedRoles={['Admin', 'NGO_Manager']}>
+                <EventDetailsPage />
               </RoleProtectedRoute>
             }
           />
@@ -211,12 +225,14 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/not-found" element={<NotFound />} />
 
-          {/* Default Redirects */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Public home */}
+          <Route path="/" element={<HomePage />} />
           <Route path="*" element={<Navigate to="/not-found" replace />} />
         </Routes>
-      </AuthProvider>
-    </Router>
+        </WorkerLanguageProvider>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 

@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
+import { LEGACY_FORM_UI, getLegacyEnglishOptions } from '@/constants/legacyFormSchema';
 
-const ParticipationStep = ({ formData, onChange, errors }) => {
-  const beneficiaryCategories = ['Farmers', 'Students', 'Women', 'Children', 'Senior Citizens', 'General Public'];
+const ParticipationStep = ({ formData, onChange, errors, ui = LEGACY_FORM_UI }) => {
+  const english = getLegacyEnglishOptions(ui);
+  const { labels, placeholders } = ui;
 
-  // Auto-calculate validation on participant counts
   useEffect(() => {
     const male = parseInt(formData.maleCount) || 0;
     const female = parseInt(formData.femaleCount) || 0;
     const total = parseInt(formData.totalParticipants) || 0;
-
     if (male + female > total && total > 0) {
-      // Would trigger error in parent validation
+      // Parent validation handles mismatch
     }
   }, [formData.maleCount, formData.femaleCount, formData.totalParticipants]);
 
@@ -18,14 +18,14 @@ const ParticipationStep = ({ formData, onChange, errors }) => {
     <div className="space-y-6">
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Total Participants <span className="text-red-600">*</span>
+          {labels.totalParticipants} <span className="text-red-600">*</span>
         </label>
         <input
           type="number"
           min="1"
           value={formData.totalParticipants}
-          onChange={e => onChange('totalParticipants', e.target.value)}
-          placeholder="0"
+          onChange={(e) => onChange('totalParticipants', e.target.value)}
+          placeholder={placeholders.totalParticipants}
           className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors.totalParticipants ? 'border-red-500' : 'border-gray-300'
           }`}
@@ -36,57 +36,51 @@ const ParticipationStep = ({ formData, onChange, errors }) => {
       </div>
 
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <p className="text-sm font-semibold text-gray-700 mb-4">Participant Breakdown</p>
+        <p className="text-sm font-semibold text-gray-700 mb-4">{labels.participantBreakdown}</p>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Male <span className="text-red-600">*</span>
+              {labels.maleCount} <span className="text-red-600">*</span>
             </label>
             <input
               type="number"
               min="0"
               value={formData.maleCount}
-              onChange={e => onChange('maleCount', e.target.value)}
-              placeholder="0"
+              onChange={(e) => onChange('maleCount', e.target.value)}
+              placeholder={placeholders.maleCount}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.maleCount ? 'border-red-500' : 'border-gray-300'
               }`}
             />
-            {errors.maleCount && (
-              <p className="text-red-600 text-sm mt-1">{errors.maleCount}</p>
-            )}
+            {errors.maleCount && <p className="text-red-600 text-sm mt-1">{errors.maleCount}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Female <span className="text-red-600">*</span>
+              {labels.femaleCount} <span className="text-red-600">*</span>
             </label>
             <input
               type="number"
               min="0"
               value={formData.femaleCount}
-              onChange={e => onChange('femaleCount', e.target.value)}
-              placeholder="0"
+              onChange={(e) => onChange('femaleCount', e.target.value)}
+              placeholder={placeholders.femaleCount}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.femaleCount ? 'border-red-500' : 'border-gray-300'
               }`}
             />
-            {errors.femaleCount && (
-              <p className="text-red-600 text-sm mt-1">{errors.femaleCount}</p>
-            )}
+            {errors.femaleCount && <p className="text-red-600 text-sm mt-1">{errors.femaleCount}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Children (Optional)
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{labels.childrenCount}</label>
             <input
               type="number"
               min="0"
               value={formData.childrenCount}
-              onChange={e => onChange('childrenCount', e.target.value)}
-              placeholder="0"
+              onChange={(e) => onChange('childrenCount', e.target.value)}
+              placeholder={placeholders.childrenCount}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.childrenCount ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -104,19 +98,19 @@ const ParticipationStep = ({ formData, onChange, errors }) => {
 
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Beneficiary Category <span className="text-red-600">*</span>
+          {labels.beneficiaryCategory} <span className="text-red-600">*</span>
         </label>
         <select
           value={formData.beneficiaryCategory}
-          onChange={e => onChange('beneficiaryCategory', e.target.value)}
+          onChange={(e) => onChange('beneficiaryCategory', e.target.value)}
           className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors.beneficiaryCategory ? 'border-red-500' : 'border-gray-300'
           }`}
         >
           <option value="">Select beneficiary category</option>
-          {beneficiaryCategories.map(category => (
+          {english.beneficiaryCategories.map((category, index) => (
             <option key={category} value={category}>
-              {category}
+              {ui.beneficiaryCategories[index] || category}
             </option>
           ))}
         </select>
@@ -124,10 +118,6 @@ const ParticipationStep = ({ formData, onChange, errors }) => {
           <p className="text-red-600 text-sm mt-1">{errors.beneficiaryCategory}</p>
         )}
       </div>
-
-      <p className="text-xs text-gray-500 bg-amber-50 p-3 rounded">
-        ⚠️ Note: Male + Female count cannot exceed total participants.
-      </p>
     </div>
   );
 };

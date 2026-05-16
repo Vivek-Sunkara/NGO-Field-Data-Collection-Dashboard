@@ -3,6 +3,7 @@ import { authMiddleware, adminOrManager, adminOnly } from '../middleware/auth.js
 import {
   getAllEvents,
   getEventDetail,
+  getEventSubmissionStats,
   getAllSubmissions,
   getSubmissionDetail,
   getDashboardStats,
@@ -41,6 +42,7 @@ router.get('/workers', authMiddleware, adminOrManager, getWorkers);
 router.post('/events', authMiddleware, adminOrManager, createEvent);
 router.get('/events', authMiddleware, adminOrManager, getAllEvents);
 router.get('/events/:eventId', authMiddleware, adminOrManager, getEventDetail);
+router.get('/events/:eventId/submissions/stats', authMiddleware, adminOrManager, getEventSubmissionStats);
 router.put('/events/:eventId', authMiddleware, adminOrManager, updateEvent);
 router.delete('/events/:eventId', authMiddleware, adminOrManager, deleteEvent);
 

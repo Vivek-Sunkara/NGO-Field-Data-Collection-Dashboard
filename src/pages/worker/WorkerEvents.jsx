@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiCheckCircle, FiAlertCircle, FiArrowRight } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/useAuth';
+import { useWorkerLanguage } from '@/context/WorkerLanguageContext';
+import { getWorkerShell } from '@/i18n/workerShell';
 import api from '@/api/client';
 import Toast from '@/components/Toast';
 
 const WorkerEvents = () => {
   const { user } = useAuth();
+  const { preferredLanguage } = useWorkerLanguage();
+  const t = getWorkerShell(preferredLanguage);
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,19 +73,19 @@ const WorkerEvents = () => {
 
   const getFormStatus = (form, statusInfo) => {
     if (statusInfo?.isExpired || new Date() > new Date(form.expiryDate)) {
-      return { label: 'Expired', color: 'text-red-600', bgColor: 'bg-red-50' };
+      return { label: t.statusExpired, color: 'text-red-600', bgColor: 'bg-red-50' };
     }
     if (statusInfo?.hasSubmission) {
-      return { label: 'Submitted', color: 'text-green-600', bgColor: 'bg-green-50' };
+      return { label: t.statusSubmitted, color: 'text-green-600', bgColor: 'bg-green-50' };
     }
     if (statusInfo?.hasDraft) {
-      return { label: 'Draft', color: 'text-blue-600', bgColor: 'bg-blue-50' };
+      return { label: t.statusDraft, color: 'text-blue-600', bgColor: 'bg-blue-50' };
     }
-    return { label: 'Pending', color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    return { label: t.statusPending, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString(t.locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -90,8 +94,8 @@ const WorkerEvents = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading events...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">{t.loadingEvents}</div>
       </div>
     );
   }
@@ -101,8 +105,8 @@ const WorkerEvents = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">My Events</h1>
-          <p className="text-gray-600">View and fill assigned forms for your events</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">{t.myEvents}</h1>
+          <p className="text-gray-600">{t.myEventsSubtitle}</p>
         </div>
 
         {/* Toast */}
@@ -114,8 +118,8 @@ const WorkerEvents = () => {
         {events.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <FiCalendar className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-            <p className="text-gray-500 mb-2">No events assigned yet</p>
-            <p className="text-gray-400 text-sm">Check back later for new events</p>
+            <p className="text-gray-500 mb-2">{t.noEventsYet}</p>
+            <p className="text-gray-400 text-sm">{t.checkBackEvents}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -143,7 +147,7 @@ const WorkerEvents = () => {
                     {event.forms.map((formItem) => {
                       const form = formItem.formId;
                       const statusInfo = getFormStatus(form, formItem.statusInfo);
-                      const isExpired = statusInfo.label === 'Expired';
+                      const isExpired = statusInfo.label === t.statusExpired;
 
                       return (
                         <div
@@ -163,12 +167,12 @@ const WorkerEvents = () => {
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                               <div className="flex items-center gap-1">
                                 <FiClock className="h-3.5 w-3.5" />
-                                <span>Expires: {formatDate(form.expiryDate)}</span>
+                                <span>{t.expires}: {formatDate(form.expiryDate)}</span>
                               </div>
                               {form.fields && (
                                 <div className="flex items-center gap-1">
                                   <FiCheckCircle className="h-3.5 w-3.5" />
-                                  <span>{form.fields.length} Questions</span>
+                                  <span>{form.fields.length} {t.questions}</span>
                                 </div>
                               )}
                             </div>
@@ -196,11 +200,11 @@ const WorkerEvents = () => {
                               }`}
                             >
                               {formItem.statusInfo?.hasSubmission ? (
-                                <>View Submission <FiArrowRight /></>
+                                <>{t.viewSubmission} <FiArrowRight /></>
                               ) : isExpired ? (
-                                <>Expired <FiAlertCircle /></>
+                                <>{t.expired} <FiAlertCircle /></>
                               ) : (
-                                <>Fill Form <FiArrowRight /></>
+                                <>{t.fillForm} <FiArrowRight /></>
                               )}
                             </button>
                           </div>
@@ -209,7 +213,7 @@ const WorkerEvents = () => {
                     })}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">No forms assigned to this event</p>
+                  <p className="text-gray-500 text-sm">{t.noFormsEvent}</p>
                 )}
               </div>
             ))}

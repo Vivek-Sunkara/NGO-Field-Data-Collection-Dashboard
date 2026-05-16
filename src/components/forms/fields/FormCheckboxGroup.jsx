@@ -21,7 +21,7 @@ const FormCheckboxGroup = ({ field, value = [], onChange, error, disabled = fals
         <p className="text-xs text-gray-500 mb-2">{field.description}</p>
       )}
       <div className="space-y-2">
-        {field.options?.map((option) => (
+        {field.options?.map((option, index) => (
           <label
             key={option}
             className="flex items-center gap-2 cursor-pointer"
@@ -34,7 +34,7 @@ const FormCheckboxGroup = ({ field, value = [], onChange, error, disabled = fals
               className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
             />
             <span className={`text-sm ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
-              {option}
+              {field.displayOptions?.[index] ?? option}
             </span>
           </label>
         ))}

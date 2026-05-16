@@ -11,7 +11,7 @@ const FormRadioGroup = ({ field, value, onChange, error, disabled = false }) => 
         <p className="text-xs text-gray-500 mb-2">{field.description}</p>
       )}
       <div className="space-y-2">
-        {field.options?.map((option) => (
+        {field.options?.map((option, index) => (
           <label
             key={option}
             className="flex items-center gap-2 cursor-pointer"
@@ -26,7 +26,7 @@ const FormRadioGroup = ({ field, value, onChange, error, disabled = false }) => 
               className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
             />
             <span className={`text-sm ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
-              {option}
+              {field.displayOptions?.[index] ?? option}
             </span>
           </label>
         ))}

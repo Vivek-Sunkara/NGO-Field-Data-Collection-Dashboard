@@ -2,6 +2,8 @@ import Event from '../models/Event.js';
 import Form from '../models/Form.js';
 import DynamicSubmission from '../models/DynamicSubmission.js';
 import DynamicDraft from '../models/DynamicDraft.js';
+import Submission from '../models/Submission.js';
+import Draft from '../models/Draft.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import AuditLog from '../models/AuditLog.js';
@@ -1170,6 +1172,67 @@ export const getFormSubmissionStatus = async (req, res) => {
       success: false,
       message: 'Failed to fetch form submission status',
       error: error.message,
+    });
+  }
+};
+
+/**
+ * Get event submission statistics for AI analysis
+ */
+export const getEventSubmissionStats = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Fetch all submissions for the event
+    const submissions = await Submission.countDocuments({ eventId });
+    const dynamicSubmissions = await DynamicSubmission.countDocuments({ eventId });
+
+    // Get draft counts
+    const dynamicDrafts = await DynamicDraft.countDocuments({ eventId });
+    const drafts = await Draft.countDocuments({ eventId });
+
+    // Get submission details for more insights
+    const submissionDetails = await Submission.find({ eventId })
+      .select('status submission_timestamp')
+      .lean();
+
+    const dynamicSubmissionDetails = await DynamicSubmission.find({ eventId })
+      .select('status submittedAt')
+      .lean();
+
+    // Count by status
+    const submittedCount = submissionDetails.filter(s => s.status === 'submitted').length +
+      dynamicSubmissionDetails.length;
+    const pendingCount = submissionDetails.filter(s => s.status !== 'submitted').length;
+
+    res.json({
+      success: true,
+      data: {
+        totalSubmissions: submissions + dynamicSubmissions,
+        completedSubmissions: submittedCount,
+        pendingSubmissions: pendingCount,
+        drafts: drafts + dynamicDrafts,
+        standardSubmissions: submissions,
+        dynamicSubmissions: dynamicSubmissions,
+        eventName: event.name,
+        eventDate: event.date,
+        status: event.status
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching event submission stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch submission statistics',
+      error: error.message
     });
   }
 };

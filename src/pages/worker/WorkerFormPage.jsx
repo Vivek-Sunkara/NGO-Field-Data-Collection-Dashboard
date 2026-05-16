@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiChevronRight, FiChevronLeft, FiSave, FiSend, FiAlertCircle, FiArrowLeft, FiClock, FiCheckCircle, FiMapPin, FiCalendar } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/useAuth';
+import { useWorkerLanguage } from '@/context/WorkerLanguageContext';
 import DynamicFieldRenderer from '@/components/forms/DynamicFieldRenderer';
+import FormLanguageBar from '@/components/forms/FormLanguageBar';
 import api from '@/api/client';
 import Toast from '@/components/Toast';
 
@@ -11,8 +13,11 @@ const WorkerFormPage = () => {
   const { formId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { preferredLanguage, setPreferredLanguage, translationRefreshNonce } = useWorkerLanguage();
 
+  const [baseForm, setBaseForm] = useState(null);
   const [form, setForm] = useState(null);
+  const [translating, setTranslating] = useState(false);
   const [responses, setResponses] = useState({});
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -21,6 +26,7 @@ const WorkerFormPage = () => {
   const [toast, setToast] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
   const [formStatus, setFormStatus] = useState(null);
+  const [location, setLocation] = useState({ state: '', city: '', village: '' });
   const [isInactive, setIsInactive] = useState(false);
   const [location, setLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState('idle'); // idle, capturing, success, error
@@ -37,6 +43,45 @@ const WorkerFormPage = () => {
     fetchForm();
     checkFormStatus();
   }, [formId]);
+
+  useEffect(() => {
+    if (!baseForm || !formId) return undefined;
+
+    let cancelled = false;
+
+    const applyLanguage = async () => {
+      if (preferredLanguage === 'en') {
+        if (!cancelled) setForm(baseForm);
+        return;
+      }
+      try {
+        setTranslating(true);
+        const response = await api.post('/translate/form-ui', {
+          formType: 'dynamic',
+          formId,
+          targetLanguage: preferredLanguage,
+        });
+        if (!cancelled && response.data.success) {
+          setForm(response.data.form);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setForm(baseForm);
+          setToast({
+            type: 'error',
+            message: error.response?.data?.message || 'Translation failed',
+          });
+        }
+      } finally {
+        if (!cancelled) setTranslating(false);
+      }
+    };
+
+    applyLanguage();
+    return () => {
+      cancelled = true;
+    };
+  }, [baseForm, formId, preferredLanguage, translationRefreshNonce]);
 
   const handleLocationChange = (field, value) => {
     setLocation(prev => {
@@ -55,6 +100,7 @@ const WorkerFormPage = () => {
 
       if (response.data.success) {
         const formData = response.data.data;
+        setBaseForm(formData);
         setForm(formData);
         const expired = formData.isExpired || formData.status !== 'active';
         setIsExpired(formData.isExpired);
@@ -121,6 +167,38 @@ const WorkerFormPage = () => {
     }
   };
 
+  const handleTranslateForm = async () => {
+    try {
+      setTranslating(true);
+      if (preferredLanguage === 'en') {
+        setForm(baseForm);
+        setToast({ type: 'success', message: 'Form displayed in English' });
+        return;
+      }
+      const response = await api.post('/translate/form-ui', {
+        formType: 'dynamic',
+        formId,
+        targetLanguage: preferredLanguage,
+      });
+      if (response.data.success) {
+        setForm(response.data.form);
+        setToast({
+          type: 'success',
+          message: `Form translated to ${preferredLanguage === 'te' ? 'Telugu' : 'Hindi'}`,
+        });
+      }
+    } catch (error) {
+      setToast({
+        type: 'error',
+        message: error.response?.data?.message || 'Translation failed',
+      });
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const resolveEventId = () => form?.eventId?._id ?? form?.eventId;
+
   const handleSaveDraft = async () => {
     if (isInactive) {
       setToast({ type: 'error', message: 'This form can no longer be modified.' });
@@ -131,10 +209,11 @@ const WorkerFormPage = () => {
       setSubmitting(true);
       await api.post('/forms/draft', {
         formId,
-        eventId: form?.eventId._id,
+        eventId: resolveEventId(),
         responses,
         location,
         activityDate,
+        sourceLanguage: preferredLanguage,
       });
 
       setToast({
@@ -201,10 +280,11 @@ const WorkerFormPage = () => {
 
       const response = await api.post('/forms/submit', {
         formId,
-        eventId: form?.eventId._id,
+        eventId: resolveEventId(),
         responses: finalResponses,
         location,
         activityDate,
+        sourceLanguage: preferredLanguage,
       });
 
       if (response.data.success) {
@@ -238,20 +318,20 @@ const WorkerFormPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading form...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">Loading form...</div>
       </div>
     );
   }
 
   if (!form) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Form not found</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">Form not found</p>
           <button
             onClick={() => navigate('/worker/events')}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
           >
             Back to Events
           </button>
@@ -262,11 +342,9 @@ const WorkerFormPage = () => {
 
   // Calculate fields per step (split into 3 steps: form details, questions, review)
   const fieldsPerStep = Math.ceil(form.fields.length / 2) || 1;
-  const STEPS = [
-    { id: 1, title: 'Form Details' },
-    { id: 2, title: 'Questions' },
-    { id: 3, title: 'Review & Submit' },
-  ];
+  const stepTitles = form.uiMeta?.steps || ['Form Details', 'Questions', 'Review & Submit'];
+  const STEPS = stepTitles.map((title, index) => ({ id: index + 1, title }));
+  const locLabels = form.uiMeta?.locationLabels || {};
 
   const getCurrentStepFields = () => {
     const startIdx = (currentStep - 1) * fieldsPerStep;
@@ -308,6 +386,14 @@ const WorkerFormPage = () => {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-800 mb-1">{form.title}</h1>
+
+          <FormLanguageBar
+            className="mt-4"
+            language={preferredLanguage}
+            onLanguageChange={setPreferredLanguage}
+            onTranslate={handleTranslateForm}
+            translating={translating}
+          />
 
           {/* Expiry warning */}
           {isInactive ? (
@@ -376,7 +462,9 @@ const WorkerFormPage = () => {
           <div className="space-y-4">
             {currentStep === 1 && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Submission Context</h2>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                  {locLabels.sectionTitle || 'Submission Context'}
+                </h2>
                 
                 {/* Event Info */}
                 {form.eventId && (
@@ -390,7 +478,7 @@ const WorkerFormPage = () => {
                 {/* Activity Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <FiCalendar className="inline mr-1" /> Field Activity Date
+                    <FiCalendar className="inline mr-1" /> {locLabels.activityDate || 'Field Activity Date'}
                   </label>
                   <input
                     type="date"
@@ -403,12 +491,16 @@ const WorkerFormPage = () => {
 
                 {/* Location Selection */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Location Details</h3>
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+                    {locLabels.sectionLocation || 'Location Details'}
+                  </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* State */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">State <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {locLabels.state || 'State'} <span className="text-red-500">*</span>
+                      </label>
                       <select
                         value={location?.state || ''}
                         onChange={(e) => handleLocationChange('state', e.target.value)}
@@ -423,6 +515,20 @@ const WorkerFormPage = () => {
 
                     {/* City */}
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {locLabels.city || 'City/District'} <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={location?.city || ''}
+                        onChange={(e) => handleLocationChange('city', e.target.value)}
+                        disabled={!location?.state}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                      >
+                        <option value="">-- Select City --</option>
+                        {location?.state && STATE_CITY_DATA[location.state].map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
                       <label className="block text-sm font-medium text-gray-700 mb-1">City/District <span className="text-red-500">*</span></label>
                       {location?.state && availableCities.length === 0 ? (
                         <input
@@ -450,7 +556,9 @@ const WorkerFormPage = () => {
 
                   {/* Village */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Village/Area (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {locLabels.village || 'Village/Area (Optional)'}
+                    </label>
                     <input
                       type="text"
                       value={location?.village || ''}

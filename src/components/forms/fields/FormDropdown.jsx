@@ -19,9 +19,9 @@ const FormDropdown = ({ field, value, onChange, error, disabled = false }) => {
         } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
       >
         <option value="">-- Select {field.label} --</option>
-        {field.options?.map((option) => (
+        {field.options?.map((option, index) => (
           <option key={option} value={option}>
-            {option}
+            {field.displayOptions?.[index] ?? option}
           </option>
         ))}
       </select>
