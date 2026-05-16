@@ -25,17 +25,17 @@ const WorkerSubmissions = () => {
 
   const pageTitle =
     statusFilter === 'pending'
-      ? 'Pending Submissions'
+      ? t.pendingSubmissions
       : statusFilter === 'submitted'
-      ? 'Submitted Reports'
-      : 'My Submissions';
+      ? t.submittedReports
+      : t.mySubmissions;
 
   const pageDescription =
     statusFilter === 'pending'
-      ? 'All currently assigned forms pending your response. Expired forms are marked accordingly.'
+      ? t.pendingSubmissionsSubtitle
       : statusFilter === 'submitted'
-      ? 'Review all of your submitted field data.'
-      : 'Review all your submitted field data.';
+      ? t.submittedReportsSubtitle
+      : t.mySubmissionsSubtitle;
 
   useEffect(() => {
     fetchSubmissions();
@@ -116,8 +116,7 @@ const WorkerSubmissions = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{t.mySubmissions}</h1>
-            <p className="text-gray-600 mt-1">{t.mySubmissionsSubtitle}</p>
+           
             <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
             <p className="text-gray-600 mt-1">{pageDescription}</p>
           </div>
@@ -126,7 +125,7 @@ const WorkerSubmissions = () => {
               onClick={() => navigate('/worker/drafts')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
-              <FiSave className="h-4 w-4" /> View Drafts
+              <FiSave className="h-4 w-4" /> {t.viewDrafts}
             </button>
           </div>
           
@@ -162,38 +161,34 @@ const WorkerSubmissions = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition">
-                      {sub.formId?.title || t.untitledForm}
-                      {statusFilter === 'pending' ? sub.title : sub.formId?.title || 'Untitled Form'}
+                     
+                      {statusFilter === 'pending' ? sub.title : sub.formId?.title || t.untitledForm}
                     </h3>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <FiCalendar className="text-blue-500" /> {new Date(sub.submittedAt).toLocaleDateString(t.locale)}
-                      </span>
+                      {statusFilter === 'pending' && sub.eventName && (
+                        <span className="flex items-center gap-1">
+                          <FiFileText className="text-gray-400" /> {t.eventLabel}: {sub.eventName}
+                        </span>
+                      )}
                       {statusFilter === 'pending' ? (
                         <span className="flex items-center gap-1">
-                          <FiCalendar className="text-blue-500" /> Expires: {sub.expiryDate ? new Date(sub.expiryDate).toLocaleString() : 'TBD'}
+                          <FiCalendar className="text-blue-500" /> {t.expires}: {sub.expiryDate ? new Date(sub.expiryDate).toLocaleString(t.locale) : t.tbd}
                         </span>
                       ) : (
                         <span className="flex items-center gap-1">
-                          <FiCalendar className="text-blue-500" /> {new Date(sub.submittedAt).toLocaleDateString()}
+                          <FiCalendar className="text-blue-500" /> {new Date(sub.submittedAt).toLocaleDateString(t.locale)}
                         </span>
                       )}
-                      <span className="flex items-center gap-1 font-medium text-gray-700">
-                        {t.eventLabel}: {sub.eventId?.name || '—'}
-                        Event: {sub.eventName || sub.eventId?.name || '—'}
-                      </span>
                       {statusFilter !== 'pending' && sub.location && (
                         <span className="flex items-center gap-1">
-                          <FiMapPin className="text-red-500" /> {sub.location.state}, {sub.location.city}
+                          <FiMapPin className="text-red-500" /> {t.locationLabel}: {sub.location.state}, {sub.location.city}
                         </span>
                       )}
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wider">
-                      {t.submitted}
-                    </span>
+                    
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                       statusFilter === 'pending'
                         ? sub.isExpired
@@ -201,7 +196,7 @@ const WorkerSubmissions = () => {
                           : 'bg-yellow-100 text-yellow-700'
                         : 'bg-green-100 text-green-700'
                     }`}>
-                      {statusFilter === 'pending' ? (sub.isExpired ? 'Expired' : 'Pending') : 'Submitted'}
+                      {statusFilter === 'pending' ? (sub.isExpired ? t.statusExpired : t.statusPending) : t.statusSubmitted}
                     </span>
                     <FiArrowRight className="text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>

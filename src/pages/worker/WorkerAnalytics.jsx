@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWorkerLanguage } from '@/context/WorkerLanguageContext';
+import { getWorkerShell } from '@/i18n/workerShell';
 import {
   FiArrowLeft,
   FiMapPin,
@@ -25,6 +27,8 @@ import Loading from '@/components/Loading';
 import { showToast, TOAST_TYPES } from '@/utils/toast';
 
 const WorkerAnalytics = () => {
+  const { preferredLanguage } = useWorkerLanguage();
+  const t = getWorkerShell(preferredLanguage);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState({
     heatmap: { points: [], states: [], center: { lat: 20, lng: 78 }, zoom: 4 },
@@ -83,14 +87,14 @@ const WorkerAnalytics = () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Analytics</h1>
-            <p className="text-gray-600 mt-2">Personal contribution metrics and activity history.</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t.myAnalytics}</h1>
+            <p className="text-gray-600 mt-2">{t.analyticsSubtitle}</p>
           </div>
           <button
             onClick={() => navigate('/worker/dashboard')}
             className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-200"
           >
-            <FiArrowLeft /> Back to Dashboard
+            <FiArrowLeft /> {t.backToDashboard}
           </button>
         </div>
 
@@ -102,42 +106,42 @@ const WorkerAnalytics = () => {
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Total reports</p>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.totalReports}</p>
                 <p className="text-3xl font-bold text-slate-900">{analytics.stats.totalReports}</p>
               </div>
               <FiFileText className="h-9 w-9 text-slate-500" />
             </div>
-            <p className="text-sm text-slate-500">All submitted activity reports</p>
+            <p className="text-sm text-slate-500">{t.allSubmittedReports}</p>
           </div>
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Active events</p>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.activeEvents}</p>
                 <p className="text-3xl font-bold text-slate-900">{analytics.stats.activeEvents}</p>
               </div>
               <FiMapPin className="h-9 w-9 text-slate-500" />
             </div>
-            <p className="text-sm text-slate-500">Assigned events currently active</p>
+            <p className="text-sm text-slate-500">{t.activeEventsSubtitle}</p>
           </div>
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Latest submission</p>
-                <p className="text-3xl font-bold text-slate-900">{analytics.stats.latestSubmission ? new Date(analytics.stats.latestSubmission).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.latestSubmissionLabel}</p>
+                <p className="text-3xl font-bold text-slate-900">{analytics.stats.latestSubmission ? new Date(analytics.stats.latestSubmission).toLocaleDateString() : t.notAvailable}</p>
               </div>
               <FiClock className="h-9 w-9 text-slate-500" />
             </div>
-            <p className="text-sm text-slate-500">Most recent completed report</p>
+            <p className="text-sm text-slate-500">{t.latestCompletedReport}</p>
           </div>
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Draft count</p>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.draftCountLabel}</p>
                 <p className="text-3xl font-bold text-slate-900">{analytics.stats.draftCount}</p>
               </div>
               <FiCheckCircle className="h-9 w-9 text-slate-500" />
             </div>
-            <p className="text-sm text-slate-500">Saved drafts waiting to be completed</p>
+            <p className="text-sm text-slate-500">{t.draftCountSubtitle}</p>
           </div>
         </div>
 
@@ -145,8 +149,8 @@ const WorkerAnalytics = () => {
           <div className="xl:col-span-2 rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Personal Heatmap</p>
-                <h2 className="text-2xl font-bold text-slate-900">Where you submitted</h2>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.personalHeatmap}</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.heatmapSubtitle}</h2>
               </div>
               <FiMapPin className="h-7 w-7 text-slate-500" />
             </div>
@@ -161,8 +165,8 @@ const WorkerAnalytics = () => {
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Event summary</p>
-                <h2 className="text-2xl font-bold text-slate-900">Your contributions</h2>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.eventSummary}</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.contributionsTitle}</h2>
               </div>
               <FiBarChart2 className="h-7 w-7 text-slate-500" />
             </div>
@@ -196,14 +200,14 @@ const WorkerAnalytics = () => {
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Activity timeline</p>
-                <h2 className="text-2xl font-bold text-slate-900">Recent submissions</h2>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.activityTimeline}</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.recentSubmissions}</h2>
               </div>
               <FiClock className="h-7 w-7 text-slate-500" />
             </div>
             <div className="space-y-4">
               {analytics.timeline.submissions.length === 0 ? (
-                <p className="text-sm text-slate-500">No submissions yet.</p>
+                <p className="text-sm text-slate-500">{t.noSubmissionsYet}</p>
               ) : (
                 analytics.timeline.submissions.map((item) => (
                   <div key={item.submissionId} className="rounded-3xl border border-slate-200 p-4">
@@ -223,14 +227,14 @@ const WorkerAnalytics = () => {
           <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">Assigned events</p>
-                <h2 className="text-2xl font-bold text-slate-900">Latest active events</h2>
+                <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">{t.assignedEventsLabel}</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t.latestActiveEvents}</h2>
               </div>
               <FiFileText className="h-7 w-7 text-slate-500" />
             </div>
             <div className="space-y-4">
               {analytics.timeline.activeEvents.length === 0 ? (
-                <p className="text-sm text-slate-500">No active assigned events.</p>
+                <p className="text-sm text-slate-500">{t.noActiveAssignedEvents}</p>
               ) : (
                 analytics.timeline.activeEvents.map((event) => (
                   <div key={event.eventId} className="rounded-3xl border border-slate-200 p-4">

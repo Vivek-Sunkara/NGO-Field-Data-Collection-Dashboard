@@ -91,8 +91,9 @@ const FieldWorkerDashboard = () => {
           return {
             ...event,
             totalForms: eventTotalForms,
+            completedForms: eventActivitiesLogged,
             activitiesLogged: eventActivitiesLogged,
-            isFullyCompleted: false // In activity model, an event is never truly "finished" until deadline
+            isFullyCompleted: eventTotalForms > 0 && eventActivitiesLogged >= eventTotalForms,
           };
         });
 
@@ -171,14 +172,12 @@ const FieldWorkerDashboard = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold">{t.completed}</p>
-                <h3 className="text-3xl font-bold text-green-600 mt-2">{stats.completed}</h3>
-                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Activities Logged</p>
+                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">{t.activitiesLogged}</p>
                 <h3 className="text-4xl font-black text-green-600 mt-2">{stats.completed}</h3>
               </div>
               <FiCheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <p className="text-xs text-gray-500 mt-3">Total field reports submitted</p>
+            <p className="text-xs text-gray-500 mt-3">{t.fieldReportsSubmitted}</p>
           </div>
 
           {/* Pending Submissions */}
@@ -188,14 +187,12 @@ const FieldWorkerDashboard = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold">{t.pending}</p>
-                <h3 className="text-3xl font-bold text-yellow-600 mt-2">{stats.pending}</h3>
-                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Pending Submissions</p>
+                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">{t.pendingSubmissions}</p>
                 <h3 className="text-4xl font-black text-yellow-600 mt-2">{stats.pending}</h3>
               </div>
               <FiClock className="h-10 w-10 text-yellow-600" />
             </div>
-            <p className="text-xs text-gray-500 mt-3">Forms still awaiting your first response</p>
+            <p className="text-xs text-gray-500 mt-3">{t.pendingSubmissionsHint}</p>
           </div>
 
           {/* Drafts */}
@@ -205,14 +202,12 @@ const FieldWorkerDashboard = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold">{t.completionRate}</p>
-                <h3 className="text-3xl font-bold text-blue-600 mt-2">{stats.completionRate}%</h3>
-                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">Drafts</p>
+                <p className="text-gray-600 text-sm font-semibold uppercase tracking-wider">{t.drafts}</p>
                 <h3 className="text-4xl font-black text-slate-700 mt-2">{stats.drafts}</h3>
               </div>
               <FiSave className="h-10 w-10 text-slate-600" />
             </div>
-            <p className="text-xs text-gray-500 mt-3">Saved drafts waiting to be completed</p>
+            <p className="text-xs text-gray-500 mt-3">{t.savedDraftsWaiting}</p>
           </div>
         </div>
 
@@ -256,7 +251,7 @@ const FieldWorkerDashboard = () => {
                     <p className="font-semibold text-gray-800">{event.name}</p>
                     <p className="text-gray-500 text-sm">
                       {t.formsCompletedLine(event.completedForms, event.totalForms)} • {t.status}: {event.isFullyCompleted ? t.statusCompleted : t.statusActive}
-                      {event.activitiesLogged} activities logged • {event.totalForms} assigned forms
+                      • {event.activitiesLogged} {t.activitiesLoggedLabel} • {event.totalForms} {t.assignedFormsLabel}
                     </p>
                   </div>
                   <button
@@ -298,7 +293,7 @@ const FieldWorkerDashboard = () => {
               className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition inline-flex items-center justify-center gap-2"
             >
               <FiTrendingUp className="h-5 w-5" />
-              View My Analytics
+              {t.viewMyAnalytics}
             </button>
           </div>
         </div>

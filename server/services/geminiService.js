@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const MARKDOWN_FORMAT_INSTRUCTION = `
 Format the entire response as clean Markdown:
@@ -16,55 +15,57 @@ Format the entire response as clean Markdown:
 export class GeminiService {
   static async callGeminiAPI(prompt, options = {}) {
     try {
-      if (!GEMINI_API_KEY) {
+      const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        console.error('[Gemini] API key missing. Expected env var GEMINI_API_KEY.');
         throw new Error('Gemini API key not configured');
       }
 
       const response = await axios.post(
-        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+        `${GEMINI_API_URL}?key=${apiKey}`,
         {
           contents: [
             {
               parts: [
                 {
-                  text: prompt
-                }
-              ]
-            }
+                  text: prompt,
+                },
+              ],
+            },
           ],
           generationConfig: {
             temperature: options.temperature ?? 0.3,
             topP: 0.9,
-            maxOutputTokens: options.maxOutputTokens ?? 4096
+            maxOutputTokens: options.maxOutputTokens ?? 4096,
           },
           safetySettings: [
             {
               category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_NONE'
+              threshold: 'BLOCK_NONE',
             },
             {
               category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_NONE'
+              threshold: 'BLOCK_NONE',
             },
             {
               category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_NONE'
+              threshold: 'BLOCK_NONE',
             },
             {
               category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_NONE'
+              threshold: 'BLOCK_NONE',
             },
             {
               category: 'HARM_CATEGORY_CIVIC_INTEGRITY',
-              threshold: 'BLOCK_NONE'
-            }
-          ]
+              threshold: 'BLOCK_NONE',
+            },
+          ],
         },
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          timeout: 30000
+          timeout: 30000,
         }
       );
 
