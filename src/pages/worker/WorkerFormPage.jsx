@@ -28,7 +28,6 @@ const WorkerFormPage = () => {
   const [formStatus, setFormStatus] = useState(null);
   const [location, setLocation] = useState({ state: '', city: '', village: '' });
   const [isInactive, setIsInactive] = useState(false);
-  const [location, setLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState('idle'); // idle, capturing, success, error
   const [locationError, setLocationError] = useState(null);
   const [activityDate, setActivityDate] = useState(new Date().toISOString().split('T')[0]);

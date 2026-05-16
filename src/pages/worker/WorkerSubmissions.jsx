@@ -193,6 +193,7 @@ const WorkerSubmissions = () => {
                   <div className="flex items-center gap-3">
                     <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wider">
                       {t.submitted}
+                    </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                       statusFilter === 'pending'
                         ? sub.isExpired
