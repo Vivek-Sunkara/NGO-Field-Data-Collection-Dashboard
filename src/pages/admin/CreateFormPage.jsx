@@ -24,11 +24,13 @@ const CreateFormPage = () => {
   const { user } = useAuth();
 
   const eventId = searchParams.get('eventId');
+  const editFormId = searchParams.get('formId');
 
   const [formData, setFormData] = useState({
     title: '',
     expiryDate: '',
     fields: [],
+    eventId: '',
   });
 
   const [events, setEvents] = useState([]);
@@ -41,13 +43,34 @@ const CreateFormPage = () => {
     fetchEvents();
   }, []);
 
+  const fetchFormDetails = async (formId) => {
+    try {
+      const response = await api.get(`/admin/forms/${formId}`);
+      if (response.data.success) {
+        const form = response.data.data;
+        setFormData({
+          title: form.title || '',
+          expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString().slice(0, 16) : '',
+          fields: form.fields || [],
+          eventId: form.eventId || '',
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching form details:', err);
+      showToast('Failed to load form details for editing', TOAST_TYPES.ERROR);
+    }
+  };
+
   const fetchEvents = async () => {
     try {
       const response = await api.get('/admin/events?limit=100');
       if (response.data.success) {
         setEvents(response.data.data);
-        if (eventId) {
+        if (eventId && !editFormId) {
           setFormData(prev => ({ ...prev, eventId }));
+        }
+        if (editFormId) {
+          await fetchFormDetails(editFormId);
         }
       }
     } catch (err) {
@@ -138,15 +161,25 @@ const CreateFormPage = () => {
     setSubmitting(true);
 
     try {
-      const response = await api.post('/admin/forms', {
+      const payload = {
         title: formData.title,
-        eventId: formData.eventId,
         expiryDate: formData.expiryDate,
         fields: formData.fields,
-      });
+      };
+
+      if (!editFormId) {
+        payload.eventId = formData.eventId;
+      }
+
+      const response = editFormId
+        ? await api.put(`/admin/forms/${editFormId}`, payload)
+        : await api.post('/admin/forms', payload);
 
       if (response.data.success) {
-        showToast('Form created successfully', TOAST_TYPES.SUCCESS);
+        showToast(
+          editFormId ? 'Form updated successfully' : 'Form created successfully',
+          TOAST_TYPES.SUCCESS
+        );
         setTimeout(() => {
           navigate('/admin/dashboard');
         }, 1500);
@@ -161,6 +194,9 @@ const CreateFormPage = () => {
       setSubmitting(false);
     }
   };
+
+  const pageTitle = editFormId ? 'Edit Form' : 'Create New Form';
+  const submitLabel = editFormId ? 'Save Changes' : 'Create Form';
 
   if (loading) {
     return (
@@ -183,9 +219,11 @@ const CreateFormPage = () => {
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Form</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
           <p className="text-gray-600 mt-2">
-            Create a dynamic form with custom fields
+            {editFormId
+              ? 'Update the form fields and expiry date.'
+              : 'Create a dynamic form with custom fields'}
           </p>
         </div>
 
@@ -227,9 +265,10 @@ const CreateFormPage = () => {
                   onChange={e =>
                     setFormData({ ...formData, eventId: e.target.value })
                   }
+                  disabled={!!editFormId}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.eventId ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${editFormId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 >
                   <option value="">-- Select Event --</option>
                   {events.map(event => (
@@ -549,7 +588,7 @@ const CreateFormPage = () => {
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              <FiPlus /> {submitting ? 'Creating...' : 'Create Form'}
+              <FiPlus /> {submitting ? (editFormId ? 'Saving...' : 'Creating...') : submitLabel}
             </button>
           </div>
         </form>

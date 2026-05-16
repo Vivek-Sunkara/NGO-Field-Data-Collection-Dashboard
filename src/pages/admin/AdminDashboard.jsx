@@ -88,6 +88,14 @@ const AdminDashboard = () => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'expired':
+        return 'bg-red-100 text-red-800';
+      case 'closed':
+        return 'bg-slate-100 text-slate-800';
+      case 'draft':
+        return 'bg-indigo-100 text-indigo-800';
       case 'completed':
         return 'bg-blue-100 text-blue-800';
       case 'cancelled':
@@ -121,6 +129,21 @@ const AdminDashboard = () => {
         }
       } catch (err) {
         const message = err.response?.data?.message || 'Failed to delete event';
+        showToast(message, TOAST_TYPES.ERROR);
+      }
+    }
+  };
+
+  const handleDeleteForm = async (formId, formTitle) => {
+    if (window.confirm(`Are you sure you want to delete the form "${formTitle}"? This action cannot be undone.`)) {
+      try {
+        const response = await api.delete(`/admin/forms/${formId}`);
+        if (response.data.success) {
+          showToast('Form deleted successfully', TOAST_TYPES.SUCCESS);
+          fetchDashboardData();
+        }
+      } catch (err) {
+        const message = err.response?.data?.message || 'Failed to delete form';
         showToast(message, TOAST_TYPES.ERROR);
       }
     }
@@ -292,6 +315,7 @@ const AdminDashboard = () => {
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
@@ -338,14 +362,19 @@ const AdminDashboard = () => {
                     <React.Fragment key={event._id}>
                       <tr className="hover:bg-gray-50 group border-b">
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => toggleEventExpansion(event._id)}
-                              className="p-1 hover:bg-gray-200 rounded text-gray-500"
-                            >
-                              {expandedEvents.has(event._id) ? <FiChevronUp /> : <FiChevronDown />}
-                            </button>
-                            <span className="font-medium text-gray-900">{event.name}</span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleEventExpansion(event._id)}
+                                className="p-1 hover:bg-gray-200 rounded text-gray-500"
+                              >
+                                {expandedEvents.has(event._id) ? <FiChevronUp /> : <FiChevronDown />}
+                              </button>
+                              <span className="font-medium text-gray-900">{event.name}</span>
+                            </div>
+                            {event.expiredFormsCount > 0 && (
+                              <span className="text-xs text-red-600">{event.expiredFormsCount} expired form{event.expiredFormsCount > 1 ? 's' : ''}</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
@@ -387,13 +416,19 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4 text-sm flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleViewSubmissions(event._id)}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
+                            className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                           >
                             View All
                           </button>
                           <button
+                            onClick={() => navigate(`/admin/create-event?editEventId=${event._id}`)}
+                            className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1"
+                          >
+                            <FiEdit /> Edit
+                          </button>
+                          <button
                             onClick={() => handleDeleteEvent(event._id, event.name)}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            className="text-red-600 hover:text-red-800 font-medium flex items-center gap-1"
                           >
                             <FiTrash2 />
                           </button>
@@ -407,6 +442,7 @@ const AdminDashboard = () => {
                                 <thead className="bg-gray-50 text-gray-600 font-bold uppercase text-[10px] tracking-wider">
                                   <tr>
                                     <th className="px-4 py-2">Form Title</th>
+                                    <th className="px-4 py-2">Form Status</th>
                                     <th className="px-4 py-2">Submissions</th>
                                     <th className="px-4 py-2">Progress</th>
                                     <th className="px-4 py-2">Action</th>
@@ -416,25 +452,60 @@ const AdminDashboard = () => {
                                   {event.formsStats?.map(form => (
                                     <tr key={form.formId} className="hover:bg-gray-50">
                                       <td className="px-4 py-3 font-medium text-gray-800">{form.title}</td>
+                                      <td className="px-4 py-3">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(form.status?.toLowerCase())}`}>
+                                          {form.status || 'Unknown'}
+                                        </span>
+                                      </td>
                                       <td className="px-4 py-3">{form.submissions} / {event.totalWorkers}</td>
                                       <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-24 bg-gray-200 rounded-full h-1.5">
-                                            <div 
-                                              className="bg-blue-500 h-1.5 rounded-full"
-                                              style={{ width: `${(form.submissions / event.totalWorkers) * 100}%` }}
-                                            />
-                                          </div>
-                                          <span className="text-[10px]">{Math.round((form.submissions / event.totalWorkers) * 100)}%</span>
-                                        </div>
+                                        {(() => {
+                                          const rawPercent = Math.round((form.submissions / event.totalWorkers) * 100);
+                                          const widthPercent = Math.min(rawPercent, 100);
+                                          const barClass = rawPercent >= 350
+                                            ? 'bg-red-600'
+                                            : rawPercent >= 300
+                                            ? 'bg-orange-500'
+                                            : rawPercent >= 200
+                                            ? 'bg-yellow-400'
+                                            : rawPercent >= 150
+                                            ? 'bg-emerald-500'
+                                            : 'bg-blue-500';
+
+                                          return (
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-24 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                                <div
+                                                  className={`${barClass} h-1.5 rounded-full`}
+                                                  style={{ width: `${widthPercent}%` }}
+                                                />
+                                              </div>
+                                              <span className="text-[10px]">{rawPercent}%</span>
+                                            </div>
+                                          );
+                                        })()}
                                       </td>
                                       <td className="px-4 py-3">
-                                        <button 
-                                          onClick={() => setActiveStatusFormId(form.formId)}
-                                          className="text-blue-600 hover:underline font-medium"
-                                        >
-                                          Track Status
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                          <button 
+                                            onClick={() => setActiveStatusFormId(form.formId)}
+                                            className="text-blue-600 hover:underline font-medium"
+                                          >
+                                            Track Status
+                                          </button>
+                                          <button 
+                                            onClick={() => navigate(`/admin/create-form?formId=${form.formId}`)}
+                                            className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1"
+                                          >
+                                            <FiEdit /> Edit
+                                          </button>
+                                          <button
+                                            onClick={() => handleDeleteForm(form.formId, form.title)}
+                                            className="text-red-600 hover:text-red-800 font-medium flex items-center gap-1"
+                                          >
+                                            <FiTrash2 /> Delete
+                                          </button>
+                                        </div>
                                       </td>
                                     </tr>
                                   ))}

@@ -9,6 +9,16 @@ import { createNotification, bulkNotify } from '../services/notificationService.
 import { logAction } from '../services/auditService.js';
 import { sendFormAssignmentEmail, sendEventAssignmentEmail } from '../services/mailService.js';
 
+const computeFormStatus = (form) => {
+  if (!form) return 'Unknown';
+  const isExpired = form.expiryDate && new Date() > new Date(form.expiryDate);
+  if (isExpired) return 'Expired';
+  if (form.status) {
+    return form.status.charAt(0).toUpperCase() + form.status.slice(1);
+  }
+  return 'Active';
+};
+
 /**
  * Get all events with submission stats
  */
@@ -16,8 +26,9 @@ export const getAllEvents = async (req, res) => {
   try {
     const { status, search, page = 1, limit = 10 } = req.query;
 
+    const isInactiveFilter = status === 'inactive';
     const query = {};
-    if (status) query.status = status;
+    if (status && !isInactiveFilter) query.status = status;
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -30,8 +41,6 @@ export const getAllEvents = async (req, res) => {
     const events = await Event.find(query)
       .populate('assignedWorkers.workerId', 'name email')
       .populate('forms.formId', 'title expiryDate status')
-      .skip(skip)
-      .limit(limit)
       .sort({ createdAt: -1 });
 
     // Add submission stats for each event
@@ -50,6 +59,7 @@ export const getAllEvents = async (req, res) => {
                 submissions: 0,
                 drafts: 0,
                 expiryDate: null,
+                status: 'Unknown',
               };
             }
 
@@ -64,12 +74,17 @@ export const getAllEvents = async (req, res) => {
               eventId: event._id,
             });
 
+            const formStatus = computeFormStatus(formItem.formId);
+            const formIsExpired = formStatus === 'Expired';
+
             return {
               formId: formItem.formId._id,
               title: formItem.formId.title || 'Untitled Form',
               submissions,
               drafts,
               expiryDate: formItem.formId.expiryDate,
+              status: formStatus,
+              isExpired: formIsExpired,
             };
           })
         );
@@ -82,9 +97,22 @@ export const getAllEvents = async (req, res) => {
         const totalExpected = totalWorkers * totalForms;
         const completionPercentage = totalExpected > 0 ? Math.round((totalSubmissions / totalExpected) * 100) : 0;
 
+        let computedStatus = event.status;
+        if (
+          computedStatus === 'active' &&
+          formsStats.length > 0 &&
+          formsStats.every((f) => f.status === 'Expired')
+        ) {
+          computedStatus = 'inactive';
+        }
+
+        const expiredFormsCount = formsStats.filter((f) => f.isExpired).length;
+
         return {
           ...eventData,
+          status: computedStatus,
           formsStats,
+          expiredFormsCount,
           totalWorkers,
           totalSubmissions,
           totalExpected,
@@ -93,11 +121,16 @@ export const getAllEvents = async (req, res) => {
       })
     );
 
-    const total = await Event.countDocuments(query);
+    const filteredEvents = isInactiveFilter
+      ? eventsWithStats.filter((ev) => ev.status === 'inactive')
+      : eventsWithStats;
+
+    const total = filteredEvents.length;
+    const pagedEvents = filteredEvents.slice(skip, skip + parseInt(limit, 10));
 
     res.json({
       success: true,
-      data: eventsWithStats,
+      data: pagedEvents,
       pagination: {
         page,
         limit,
@@ -182,10 +215,21 @@ export const getEventDetail = async (req, res) => {
       })
     );
 
+    const eventStatus =
+      event.status === 'active' &&
+      event.forms.length > 0 &&
+      event.forms.every((formItem) => {
+        const form = formItem.formId;
+        return form?.expiryDate && new Date() > new Date(form.expiryDate);
+      })
+        ? 'inactive'
+        : event.status;
+
     res.json({
       success: true,
       data: {
         ...event.toObject(),
+        status: eventStatus,
         formsDetail,
       },
     });
@@ -1004,6 +1048,42 @@ export const deleteForm = async (req, res) => {
 };
 
 /**
+ * Get form details for editing
+ */
+export const getFormDetail = async (req, res) => {
+  try {
+    const { formId } = req.params;
+
+    const form = await Form.findById(formId).populate('eventId', 'name');
+    if (!form) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        _id: form._id,
+        title: form.title,
+        eventId: form.eventId?._id,
+        eventName: form.eventId?.name,
+        expiryDate: form.expiryDate,
+        fields: form.fields,
+        status: form.status,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch form details',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Get detailed submission status for a specific form
  */
 export const getFormSubmissionStatus = async (req, res) => {
@@ -1022,10 +1102,7 @@ export const getFormSubmissionStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Event for this form not found' });
     }
 
-    // Use end of day for expiry
-    const expiry = new Date(form.expiryDate);
-    expiry.setHours(23, 59, 59, 999);
-    const isExpired = new Date() > expiry;
+    const isExpired = new Date() > new Date(form.expiryDate);
 
     const workerStatus = await Promise.all(
       event.assignedWorkers.map(async (workerItem) => {

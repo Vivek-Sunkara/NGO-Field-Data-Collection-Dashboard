@@ -4,6 +4,7 @@ import DynamicSubmission from '../models/DynamicSubmission.js';
 import Event from '../models/Event.js';
 import Form from '../models/Form.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { createNotification } from './notificationService.js';
 import { sendReminderEmail } from './mailService.js';
 import { logAction } from './auditService.js';
@@ -85,6 +86,93 @@ export const startReminderCron = () => {
  * Check for expired forms and notify admins
  * Runs every 6 hours
  */
+export const startExpiryAlertCron = () => {
+  // Run every 5 minutes to alert workers 30 minutes before expiry
+  cron.schedule('*/5 * * * *', async () => {
+    console.log('[Cron] Running 30-minute expiry alert at', new Date());
+
+    try {
+      const now = new Date();
+      const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+
+      const expiringForms = await Form.find({
+        expiryDate: {
+          $gt: now,
+          $lte: thirtyMinutesFromNow,
+        },
+        status: 'active',
+      }).populate('eventId');
+
+      let alertsSent = 0;
+
+      for (const form of expiringForms) {
+        const event = form.eventId;
+        if (!event) continue;
+
+        const workers = event.assignedWorkers || [];
+        for (const workerItem of workers) {
+          const workerId = workerItem.workerId;
+
+          const alreadySubmitted = await DynamicSubmission.exists({
+            formId: form._id,
+            workerId,
+            status: 'submitted',
+          });
+
+          if (alreadySubmitted) continue;
+
+          const existingReminder = await Notification.findOne({
+            userId: workerId,
+            type: 'REMINDER',
+            'relatedEntity.entityType': 'Form',
+            'relatedEntity.entityId': form._id,
+            createdAt: { $gte: new Date(now.getTime() - 30 * 60 * 1000) },
+          });
+
+          if (existingReminder) continue;
+
+          const worker = await User.findById(workerId).select('name email');
+          if (!worker) continue;
+
+          await createNotification(
+            worker._id,
+            'REMINDER',
+            `Form expiring soon: ${form.title}`,
+            `The form "${form.title}" for event "${event.name}" expires at ${new Date(form.expiryDate).toLocaleString()}. Please submit it within the next 30 minutes.`,
+            {
+              entityType: 'Form',
+              entityId: form._id,
+            },
+            `/worker/forms/${form._id}`
+          );
+
+          await sendReminderEmail(worker, form, event, true);
+
+          await logAction(
+            null,
+            'System',
+            'EXPIRY_ALERT_SENT',
+            'Form',
+            form._id,
+            form.title,
+            { recipientId: worker._id, recipientEmail: worker.email },
+            null,
+            'success'
+          );
+
+          alertsSent++;
+        }
+      }
+
+      console.log(`[Cron] 30-minute expiry alerts sent: ${alertsSent}`);
+    } catch (error) {
+      console.error('[Cron] Error in expiry alert job:', error);
+    }
+  });
+
+  console.log('[Cron] 30-minute expiry alert job scheduled every 5 minutes');
+};
+
 export const startExpiryCheckCron = () => {
   // Run every 6 hours
   cron.schedule('0 0,6,12,18 * * *', async () => {
@@ -200,6 +288,7 @@ export const startEventCompletionCron = () => {
  */
 export const initializeCronJobs = () => {
   startReminderCron();
+  startExpiryAlertCron();
   startExpiryCheckCron();
   startEventCompletionCron();
 };

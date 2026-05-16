@@ -66,12 +66,16 @@ const FieldWorkerDashboard = () => {
               totalAssignedForms++;
               eventTotalForms++;
 
+              const expiryDate = formItem.formId?.expiryDate;
+              const expiryTime = expiryDate ? new Date(expiryDate) : null;
+              const isExpired = expiryTime ? Date.now() > expiryTime.getTime() : false;
+
               // Find all submissions for this form by this worker
               const formSubmissions = submissionsData.filter(sub => 
                 (sub.formId?._id || sub.formId).toString() === fId
               );
 
-              if (formSubmissions.length === 0) {
+              if (formSubmissions.length === 0 && !isExpired) {
                 totalPendingForms++;
               }
 

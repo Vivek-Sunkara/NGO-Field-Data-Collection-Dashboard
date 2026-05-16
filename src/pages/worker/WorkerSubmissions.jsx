@@ -28,7 +28,7 @@ const WorkerSubmissions = () => {
 
   const pageDescription =
     statusFilter === 'pending'
-      ? 'All currently pending forms assigned to you.'
+      ? 'All currently assigned forms pending your response. Expired forms are marked accordingly.'
       : statusFilter === 'submitted'
       ? 'Review all of your submitted field data.'
       : 'Review all your submitted field data.';
@@ -60,13 +60,18 @@ const WorkerSubmissions = () => {
             event.forms?.forEach((formItem) => {
               const formId = (formItem.formId?._id || formItem.formId).toString();
               if (!submittedFormIds.has(formId)) {
+                const expiryDate = formItem.formId?.expiryDate;
+                const expiryTime = expiryDate ? new Date(expiryDate) : null;
+                const isExpired = expiryTime ? Date.now() > expiryTime.getTime() : false;
+
                 pending.push({
                   formId,
                   title: formItem.formId?.title || 'Untitled Form',
                   eventId: event._id,
                   eventName: event.name,
-                  expiryDate: formItem.formId?.expiryDate,
-                  status: 'pending',
+                  expiryDate,
+                  isExpired,
+                  status: isExpired ? 'expired' : 'pending',
                 });
               }
             });
@@ -156,7 +161,7 @@ const WorkerSubmissions = () => {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
                       {statusFilter === 'pending' ? (
                         <span className="flex items-center gap-1">
-                          <FiCalendar className="text-blue-500" /> Expires: {sub.expiryDate ? new Date(sub.expiryDate).toLocaleDateString() : 'TBD'}
+                          <FiCalendar className="text-blue-500" /> Expires: {sub.expiryDate ? new Date(sub.expiryDate).toLocaleString() : 'TBD'}
                         </span>
                       ) : (
                         <span className="flex items-center gap-1">
@@ -176,9 +181,13 @@ const WorkerSubmissions = () => {
                   
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      statusFilter === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                      statusFilter === 'pending'
+                        ? sub.isExpired
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                        : 'bg-green-100 text-green-700'
                     }`}>
-                      {statusFilter === 'pending' ? 'Pending' : 'Submitted'}
+                      {statusFilter === 'pending' ? (sub.isExpired ? 'Expired' : 'Pending') : 'Submitted'}
                     </span>
                     <FiArrowRight className="text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </div>

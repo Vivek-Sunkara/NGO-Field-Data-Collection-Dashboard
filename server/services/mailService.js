@@ -112,22 +112,26 @@ export const sendSubmissionNotificationEmail = async (admin, worker, form, event
 /**
  * Send reminder email to pending workers
  */
-export const sendReminderEmail = async (worker, form, event) => {
+export const sendReminderEmail = async (worker, form, event, isExpiryAlert = false) => {
   try {
     if (!transporter) initializeMailer();
+
+    const expiryDate = new Date(form.expiryDate);
+    const expiryLabel = expiryDate.toLocaleString();
+    const subjectPrefix = isExpiryAlert ? 'Urgent' : 'Reminder';
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: worker.email,
-      subject: `Reminder: ${form.title} - Please Submit`,
+      subject: `${subjectPrefix}: ${form.title} - Please Submit`,
       html: `
-        <h2>Submission Reminder</h2>
+        <h2>${subjectPrefix} Submission Reminder</h2>
         <p>Hello ${worker.name},</p>
-        <p>This is a reminder that you have a pending form to submit.</p>
+        <p>This is ${isExpiryAlert ? 'an urgent reminder that your form is expiring soon' : 'a reminder that you have a pending form to submit'}.</p>
         <h3>${form.title}</h3>
         <p><strong>Event:</strong> ${event.name}</p>
-        <p><strong>Expiry Date:</strong> ${new Date(form.expiryDate).toLocaleDateString()}</p>
-        <p>Please submit the form at your earliest convenience.</p>
+        <p><strong>Expiry Date:</strong> ${expiryLabel}</p>
+        <p>Please submit the form before it expires.</p>
         <p><a href="${process.env.FRONTEND_URL}/worker/events" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">Submit Now</a></p>
         <p>Best regards,<br>NGO Field Data Collection Team</p>
       `,

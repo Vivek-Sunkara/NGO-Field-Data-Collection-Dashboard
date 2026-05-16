@@ -13,9 +13,22 @@ import { logAction } from '../services/auditService.js';
 const isFormExpired = (expiryDate) => {
   if (!expiryDate) return false;
   const expiry = new Date(expiryDate);
-  // Set to end of day to be generous
-  expiry.setHours(23, 59, 59, 999);
-  return new Date() > expiry;
+  return Date.now() > expiry.getTime();
+};
+
+const isFormClosedOrExpired = (form) => {
+  if (!form) return true;
+  if (form.status && form.status !== 'active') return true;
+  return isFormExpired(form.expiryDate);
+};
+
+const computeFormStatus = (form) => {
+  if (!form) return 'Unknown';
+  if (isFormExpired(form.expiryDate)) return 'Expired';
+  if (form.status && form.status !== 'active') {
+    return form.status.charAt(0).toUpperCase() + form.status.slice(1);
+  }
+  return 'Active';
 };
 
 /**
@@ -27,14 +40,43 @@ export const getWorkerEvents = async (req, res) => {
 
     const events = await Event.find({
       'assignedWorkers.workerId': workerId,
-      status: 'active',
     })
       .populate('forms.formId', 'title expiryDate status')
       .sort({ createdAt: -1 });
 
+    const enrichedEvents = events.map((event) => {
+      const forms = event.forms.map((formItem) => {
+        const form = formItem.formId;
+        const isExpired = isFormExpired(form?.expiryDate);
+        const status = computeFormStatus(form);
+
+        return {
+          ...formItem.toObject(),
+          statusInfo: {
+            isExpired,
+            status,
+          },
+          formId: {
+            ...form?.toObject(),
+            status,
+          },
+        };
+      });
+
+      const eventStatus = event.status === 'active' && forms.length > 0 && forms.every((form) => form.statusInfo.isExpired)
+        ? 'inactive'
+        : event.status;
+
+      return {
+        ...event.toObject(),
+        status: eventStatus,
+        forms,
+      };
+    });
+
     res.json({
       success: true,
-      data: events,
+      data: enrichedEvents,
     });
   } catch (error) {
     res.status(500).json({
@@ -186,10 +228,10 @@ export const saveDraftForForm = async (req, res) => {
       }
     }
 
-    if (isFormExpired(form.expiryDate)) {
+    if (isFormClosedOrExpired(form)) {
       return res.status(403).json({
         success: false,
-        message: 'Form has expired and cannot be modified',
+        message: 'Form has expired or been closed and cannot be modified',
       });
     }
 
@@ -297,10 +339,10 @@ export const submitFormResponse = async (req, res) => {
       }
     }
 
-    if (isFormExpired(form.expiryDate)) {
+    if (isFormClosedOrExpired(form)) {
       return res.status(403).json({
         success: false,
-        message: 'Form has expired and cannot be submitted',
+        message: 'Form has expired or been closed and cannot be submitted',
       });
     }
 

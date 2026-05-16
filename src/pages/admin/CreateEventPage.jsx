@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus, FiX } from 'react-icons/fi';
 import MainLayout from '@/layouts/MainLayout';
 import useAuth from '@/hooks/useAuth';
@@ -9,6 +9,8 @@ import Loading from '@/components/Loading';
 
 const CreateEventPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editEventId = searchParams.get('editEventId');
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -26,11 +28,31 @@ const CreateEventPage = () => {
     fetchWorkers();
   }, []);
 
+  const fetchEventDetails = async (eventId) => {
+    try {
+      const response = await api.get(`/admin/events/${eventId}`);
+      if (response.data.success) {
+        const event = response.data.data;
+        setFormData({
+          name: event.name || '',
+          description: event.description || '',
+          workerIds: event.assignedWorkers?.map(w => w.workerId?._id || w.workerId) || [],
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching event details:', err);
+      showToast('Failed to load event details for editing', TOAST_TYPES.ERROR);
+    }
+  };
+
   const fetchWorkers = async () => {
     try {
       const response = await api.get('/admin/workers');
       if (response.data.success) {
         setWorkers(response.data.data);
+      }
+      if (editEventId) {
+        await fetchEventDetails(editEventId);
       }
     } catch (err) {
       console.error('Error fetching workers:', err);
@@ -81,10 +103,15 @@ const CreateEventPage = () => {
     setSubmitting(true);
 
     try {
-      const response = await api.post('/admin/events', formData);
+      const response = editEventId
+        ? await api.put(`/admin/events/${editEventId}`, formData)
+        : await api.post('/admin/events', formData);
 
       if (response.data.success) {
-        showToast('Event created successfully', TOAST_TYPES.SUCCESS);
+        showToast(
+          editEventId ? 'Event updated successfully' : 'Event created successfully',
+          TOAST_TYPES.SUCCESS
+        );
         setTimeout(() => {
           navigate('/admin/dashboard');
         }, 1500);
@@ -112,6 +139,9 @@ const CreateEventPage = () => {
     .filter(w => formData.workerIds.includes(w._id))
     .map(w => w.name);
 
+  const pageTitle = editEventId ? 'Edit Event' : 'Create New Event';
+  const submitLabel = editEventId ? 'Save Changes' : 'Create Event';
+
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto px-4 py-6">
@@ -125,9 +155,11 @@ const CreateEventPage = () => {
 
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Event</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{pageTitle}</h1>
           <p className="text-gray-600 mt-2">
-            Create an event and assign field workers to it
+            {editEventId
+              ? 'Update the event details and assigned workers.'
+              : 'Create an event and assign field workers to it'}
           </p>
         </div>
 
@@ -234,7 +266,7 @@ const CreateEventPage = () => {
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              <FiPlus /> {submitting ? 'Creating...' : 'Create Event'}
+              <FiPlus /> {submitting ? (editEventId ? 'Saving...' : 'Creating...') : submitLabel}
             </button>
           </div>
         </form>

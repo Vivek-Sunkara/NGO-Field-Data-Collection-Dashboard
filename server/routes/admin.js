@@ -16,6 +16,7 @@ import {
   updateForm,
   deleteForm,
   getFormSubmissionStatus,
+  getFormDetail,
 } from '../controllers/adminController.js';
 import {
   getNotifications_Handler,
@@ -48,6 +49,7 @@ router.post('/forms', authMiddleware, adminOrManager, createForm);
 router.put('/forms/:formId', authMiddleware, adminOrManager, updateForm);
 router.delete('/forms/:formId', authMiddleware, adminOrManager, deleteForm);
 router.get('/forms/:formId/status', authMiddleware, adminOrManager, getFormSubmissionStatus);
+router.get('/forms/:formId', authMiddleware, adminOrManager, getFormDetail);
 
 // Submissions management
 router.get('/submissions', authMiddleware, adminOrManager, getAllSubmissions);

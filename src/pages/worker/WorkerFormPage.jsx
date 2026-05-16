@@ -21,6 +21,7 @@ const WorkerFormPage = () => {
   const [toast, setToast] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
   const [formStatus, setFormStatus] = useState(null);
+  const [isInactive, setIsInactive] = useState(false);
   const [location, setLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState('idle'); // idle, capturing, success, error
   const [locationError, setLocationError] = useState(null);
@@ -55,10 +56,12 @@ const WorkerFormPage = () => {
       if (response.data.success) {
         const formData = response.data.data;
         setForm(formData);
+        const expired = formData.isExpired || formData.status !== 'active';
         setIsExpired(formData.isExpired);
+        setIsInactive(expired);
 
         // Load draft if exists
-        if (!formData.isExpired) {
+        if (!expired) {
           loadDraft();
         }
       }
@@ -119,6 +122,11 @@ const WorkerFormPage = () => {
   };
 
   const handleSaveDraft = async () => {
+    if (isInactive) {
+      setToast({ type: 'error', message: 'This form can no longer be modified.' });
+      return;
+    }
+
     try {
       setSubmitting(true);
       await api.post('/forms/draft', {
@@ -145,6 +153,11 @@ const WorkerFormPage = () => {
   };
 
   const handleSubmit = async () => {
+    if (isInactive) {
+      setToast({ type: 'error', message: 'This form can no longer be submitted.' });
+      return;
+    }
+
     try {
       setSubmitting(true);
       setErrors({});
@@ -268,10 +281,13 @@ const WorkerFormPage = () => {
   ) && (currentStep !== 1 || (location?.state && location?.city));
 
   const formatExpiryDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
     });
   };
 
@@ -294,9 +310,10 @@ const WorkerFormPage = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-1">{form.title}</h1>
 
           {/* Expiry warning */}
-          {isExpired ? (
+          {isInactive ? (
             <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
-              <FiAlertCircle className="h-4 w-4" /> Form has expired
+              <FiAlertCircle className="h-4 w-4" />
+              {isExpired ? 'Form has expired' : 'Form is no longer active'}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-gray-600 text-sm mt-2">
@@ -453,7 +470,7 @@ const WorkerFormPage = () => {
                   value={responses[field.id]}
                   onChange={handleFieldChange}
                   errors={errors}
-                  disabled={submitting || isExpired}
+                  disabled={submitting || isInactive}
                 />
               </div>
             ))}
@@ -534,7 +551,7 @@ const WorkerFormPage = () => {
             <FiChevronLeft /> Previous
           </button>
 
-          {!isExpired && (
+          {!isInactive && (
             <>
               <button
                 onClick={handleSaveDraft}
@@ -564,10 +581,10 @@ const WorkerFormPage = () => {
             </>
           )}
 
-          {isExpired && (
+          {isInactive && (
             !hasNextStep ? (
               <div className="flex-1 text-center py-2 bg-red-50 text-red-700 rounded-lg font-medium border border-red-200">
-                Form has expired and can no longer be submitted
+                This form is no longer available for submission
               </div>
             ) : (
               <button
